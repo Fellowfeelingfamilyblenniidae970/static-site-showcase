@@ -4,7 +4,7 @@ set -Eeuo pipefail
 readonly APP_NAME="static-site-showcase"
 readonly DEFAULT_IMAGE_REPOSITORY="docker.io/epiphany131/static-site-showcase"
 readonly IMAGE_REPOSITORY="${STATIC_SHOWCASE_IMAGE_REPOSITORY:-$DEFAULT_IMAGE_REPOSITORY}"
-readonly DEFAULT_VERSION="1.2.0"
+readonly DEFAULT_VERSION="1.3.0"
 readonly DEFAULT_INSTALL_DIR="/opt/static-site-showcase"
 readonly DEFAULT_HTTP_PORT="3000"
 readonly DEFAULT_ADMIN_USERNAME="admin"
@@ -56,7 +56,7 @@ Static Site Showcase 部署工具
   --admin-password 密码   初始管理员密码（默认：123456）
   --domain 域名           HTTPS 域名，不含协议、路径或端口
   --email 邮箱            HTTPS 证书联系邮箱
-  --version 版本          Docker 镜像版本（默认：1.2.0）
+  --version 版本          Docker 镜像版本（默认：1.3.0）
   --dir 路径              安装目录（默认：/opt/static-site-showcase）
   --yes                   不提问，接受所有默认值
   -h, --help              显示帮助
@@ -68,7 +68,7 @@ Static Site Showcase 部署工具
   deploy.sh install --mode http
   deploy.sh install --mode http --local-http
   deploy.sh install --mode https --domain showcase.example.com --email admin@example.com
-  deploy.sh upgrade --version 1.2.0
+  deploy.sh upgrade --version 1.3.0
   deploy.sh backup
 EOF
 }

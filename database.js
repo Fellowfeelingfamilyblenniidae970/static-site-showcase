@@ -3,7 +3,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const { hashPassword, getDefaultAdminCredentials } = require('./lib/password');
-const { normalizeSettings, DEFAULT_SETTINGS } = require('./lib/settings');
+const { normalizeSettings, uploadMaxFileSizeFromEnv } = require('./lib/settings');
 
 const LEGACY_MIGRATION = 'legacy_json_v1';
 
@@ -189,11 +189,15 @@ class DatabaseManager {
 
   ensureSettings() {
     const current = this.db.prepare('SELECT value FROM settings WHERE id=1').get();
+    const uploadMaxFileSize = uploadMaxFileSizeFromEnv(this.env);
     if (!current) {
+      const settings = normalizeSettings({}, { uploadMaxFileSize });
       this.db.prepare('INSERT INTO settings(id,value,updated_at) VALUES(1,?,?)')
-        .run(JSON.stringify(DEFAULT_SETTINGS), now());
+        .run(JSON.stringify(settings), now());
     } else {
-      const normalized = normalizeSettings(JSON.parse(current.value));
+      const parsed = JSON.parse(current.value);
+      const options = parsed?.uploads?.maxFileSize === undefined ? { uploadMaxFileSize } : {};
+      const normalized = normalizeSettings(parsed, options);
       this.db.prepare('UPDATE settings SET value=?,updated_at=? WHERE id=1')
         .run(JSON.stringify(normalized), now());
     }

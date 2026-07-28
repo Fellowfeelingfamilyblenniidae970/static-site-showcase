@@ -6,14 +6,14 @@ const path = require('node:path');
 const Database = require('../database');
 const { getDefaultAdminCredentials, verifyPassword } = require('../lib/password');
 
-async function fixture(t, legacy) {
+async function fixture(t, legacy, env = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'static-host-sqlite-'));
   const legacyPath = path.join(dir, 'sites.json');
   if (legacy) await fs.writeFile(legacyPath, JSON.stringify(legacy));
   const db = new Database({
     dbPath: path.join(dir, 'platform.db'),
     legacyJsonPath: legacyPath,
-    env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: '123456' }
+    env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: '123456', ...env }
   });
   await db.init();
   t.after(() => { db.close(); return fs.rm(dir, { recursive: true, force: true }); });
@@ -70,8 +70,21 @@ test('全站设置可以持久化', async (t) => {
   const db = await fixture(t);
   const settings = db.getSettings();
   settings.home.layout = 'grid';
+  settings.uploads.maxFileSize = 24 * 1024 * 1024;
   db.updateSettings(settings);
   assert.equal(db.getSettings().home.layout, 'grid');
+  assert.equal(db.getSettings().uploads.maxFileSize, 24 * 1024 * 1024);
+});
+
+test('全新和旧设置从合法环境变量迁移上传限制且不会覆盖已保存值', async (t) => {
+  const db = await fixture(t, undefined, { MAX_FILE_SIZE: String(16 * 1024 * 1024) });
+  assert.equal(db.getSettings().uploads.maxFileSize, 16 * 1024 * 1024);
+  const legacy = db.getSettings(); delete legacy.uploads;
+  db.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(legacy));
+  db.env.MAX_FILE_SIZE = String(20 * 1024 * 1024); db.ensureSettings();
+  assert.equal(db.getSettings().uploads.maxFileSize, 20 * 1024 * 1024);
+  db.env.MAX_FILE_SIZE = String(30 * 1024 * 1024); db.ensureSettings();
+  assert.equal(db.getSettings().uploads.maxFileSize, 20 * 1024 * 1024);
 });
 
 test('旧 sites schema 自动移除自定义域名字段', async (t) => {

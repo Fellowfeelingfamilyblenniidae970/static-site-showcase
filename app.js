@@ -10,10 +10,13 @@ const { createAuth } = require('./lib/auth');
 const { extractZip, hasRootIndex, flattenSingleRoot } = require('./lib/extract');
 const { listSourceFiles, readSourceFile } = require('./lib/source');
 const { renderMarkdown } = require('./lib/markdown');
-const { patchSettings, projectPublicSettings } = require('./lib/settings');
+const {
+  patchSettings, projectPublicSettings, MIN_UPLOAD_MAX_FILE_SIZE, MAX_UPLOAD_MAX_FILE_SIZE
+} = require('./lib/settings');
 const { saveBrandAsset, deleteBrandAsset, MAX_IMAGE_SIZE } = require('./lib/image');
 const { buildCodeSite } = require('./lib/code-site');
 const { strictCodeUpload } = require('./lib/code-upload');
+const { createStrictZipUpload } = require('./lib/zip-upload');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const loginAttempts = new Map();
@@ -28,7 +31,6 @@ function createApp({ db, rootDir = __dirname } = {}) {
   const brandingDir = path.join(rootDir, 'database', 'assets', 'branding');
   const publicDir = path.join(rootDir, 'public');
   const showcaseDir = path.join(rootDir, 'showcase');
-  const maxZipSize = Number.parseInt(process.env.MAX_FILE_SIZE, 10) || 50 * 1024 * 1024;
   const auth = createAuth(db);
   const sharedHandlers = new Map();
   let activeZipBuilds = 0;
@@ -36,7 +38,10 @@ function createApp({ db, rootDir = __dirname } = {}) {
   if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  const zipUpload = fileUpload({ limits: { fileSize: maxZipSize }, abortOnLimit: true, useTempFiles: true, tempFileDir: uploadsDir });
+  const zipUpload = createStrictZipUpload({
+    uploadsDir,
+    getMaxFileSize: () => db.getSettings().uploads.maxFileSize
+  });
   const imageUpload = fileUpload({ limits: { fileSize: MAX_IMAGE_SIZE }, abortOnLimit: true, useTempFiles: false });
 
   function requestHost(req) {
@@ -247,6 +252,13 @@ function createApp({ db, rootDir = __dirname } = {}) {
   });
 
   app.get('/api/settings', (req, res) => res.set('Cache-Control', 'public, max-age=15').json({ success: true, settings: projectPublicSettings(db.getSettings()) }));
+  app.get('/api/upload-config', auth.required, (req, res) => {
+    const maxFileSize = db.getSettings().uploads.maxFileSize;
+    res.set('Cache-Control', 'no-store').json({
+      success: true,
+      uploads: { maxFileSize, minFileSize: MIN_UPLOAD_MAX_FILE_SIZE, maxAllowedFileSize: MAX_UPLOAD_MAX_FILE_SIZE }
+    });
+  });
   app.get('/api/admin/settings', auth.admin, (req, res) => res.set('Cache-Control', 'no-store').json({ success: true, settings: db.getSettings() }));
   app.patch('/api/admin/settings', auth.admin, auth.csrf, (req, res) => {
     try { res.json({ success: true, settings: db.updateSettings(patchSettings(db.getSettings(), req.body)) }); }
@@ -280,12 +292,43 @@ function createApp({ db, rootDir = __dirname } = {}) {
     });
   }
 
+  async function discardUpload(uploaded) {
+    const files = [];
+    function collect(value) {
+      if (!value) return;
+      if (Array.isArray(value)) return value.forEach(collect);
+      if (value.tempFilePath) files.push(value);
+      else if (typeof value === 'object') Object.values(value).forEach(collect);
+    }
+    collect(uploaded);
+    await Promise.all(files.map((item) => fs.rm(item.tempFilePath, { force: true }).catch(() => {})));
+  }
+
   app.post('/api/sites', auth.csrf, zipUpload, async (req, res) => {
-    if (!req.files?.file || Array.isArray(req.files.file)) return res.status(400).json({ error: '请选择一个 ZIP 文件' });
+    if (!req.files?.file || Array.isArray(req.files.file) || Object.keys(req.files).some((key) => key !== 'file')) {
+      await discardUpload(req.files);
+      return res.status(400).json({ error: '请选择一个 ZIP 文件' });
+    }
+    const body = req.body || {};
+    if (Object.keys(body).some((key) => !['name', 'description'].includes(key)) ||
+      ['name', 'description'].some((key) => Array.isArray(body[key]))) {
+      await discardUpload(req.files);
+      return res.status(400).json({ error: '站点信息格式无效' });
+    }
     const uploaded = req.files.file;
-    if (path.extname(uploaded.name).toLowerCase() !== '.zip') return res.status(400).json({ error: '只支持 ZIP 格式文件' });
+    if (uploaded.size > req.zipUploadMaxFileSize) {
+      await discardUpload(req.files);
+      return res.status(413).send(`ZIP 文件不能超过 ${Math.round(req.zipUploadMaxFileSize / 1024 / 1024)} MiB`);
+    }
+    if (path.extname(uploaded.name).toLowerCase() !== '.zip') {
+      await discardUpload(uploaded);
+      return res.status(400).json({ error: '只支持 ZIP 格式文件' });
+    }
     const name = String(req.body.name || uploaded.name.replace(/\.zip$/i, '')).trim().slice(0, 120);
-    if (!name) return res.status(400).json({ error: '站点名称不能为空' });
+    if (!name) {
+      await discardUpload(uploaded);
+      return res.status(400).json({ error: '站点名称不能为空' });
+    }
     const id = randomUUID(), sitePath = path.join(sitesDir, id), archivePath = path.join(uploadsDir, `${id}.zip`);
     try {
       await fs.mkdir(sitePath, { recursive: true }); await fs.mkdir(uploadsDir, { recursive: true }); await uploaded.mv(archivePath);

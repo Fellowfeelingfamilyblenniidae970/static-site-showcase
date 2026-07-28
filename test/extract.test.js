@@ -33,6 +33,15 @@ test('测试 ZIP 安全解压为可访问的静态站点', async (t) => {
   ]);
 });
 
+test('无效或截断的 ZIP 返回明确格式错误', async (t) => {
+  const dir = await tempDir(t);
+  const archive = path.join(dir, 'invalid.zip');
+  await fs.writeFile(archive, Buffer.alloc(1024));
+  await assert.rejects(() => extractZip(archive, path.join(dir, 'output')), {
+    code: 'ZIP_INVALID', message: '压缩包格式无效或文件不完整'
+  });
+});
+
 test('安全路径解析拒绝绝对路径和目录穿越', async (t) => {
   const dir = await tempDir(t);
   assert.equal(safeJoin(dir, '../outside.txt'), null);

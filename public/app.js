@@ -1,4 +1,4 @@
-const state = { user: null, sites: [], pages: [], selectedFile: null, loadedViews: new Set(), pageSlugManual: false, previewTimer: null, previewRequest: 0 };
+const state = { user: null, sites: [], pages: [], selectedFile: null, uploadConfig: null, uploading: false, loadedViews: new Set(), pageSlugManual: false, previewTimer: null, previewRequest: 0 };
 const $ = (id) => document.getElementById(id);
 
 function cookie(name) { const item = document.cookie.split('; ').find((part) => part.startsWith(`${name}=`)); return item ? decodeURIComponent(item.slice(name.length + 1)) : ''; }
@@ -13,6 +13,14 @@ function errorBox(id, text = '') { const el = $(id); el.textContent = text; el.h
 function action(text, style, handler) { const el = document.createElement('button'); el.type = 'button'; el.className = `btn btn-sm ${style}`; el.textContent = text; el.addEventListener('click', handler); return el; }
 function badge(text, type = '') { const el = document.createElement('span'); el.className = `status-badge ${type}`; el.textContent = text; return el; }
 function closeDialog(dialog) { dialog.close(); dialog.querySelectorAll('.alert').forEach((el) => el.hidden = true); }
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return '未知大小';
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KiB', 'MiB', 'GiB'];
+  let value = bytes / 1024; let index = 0;
+  while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
+  return `${value >= 10 || Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+}
 
 const views = {
   sites: ['站点管理', '部署新站点并管理已有作品。'],
@@ -166,11 +174,15 @@ async function loadSettings() {
   $('settingHomeTitle').value = settings.home.title; $('settingHomeDescription').value = settings.home.description; $('settingLayout').value = settings.home.layout;
   $('settingTheme').value = settings.appearance.defaultTheme; $('settingAccent').value = settings.appearance.accentColor;
   $('settingThemeSwitch').checked = settings.appearance.allowThemeSwitch; $('settingPreview').checked = settings.home.showPreview;
+  $('settingUploadMaxFileSize').value = String(settings.uploads.maxFileSize / 1024 / 1024);
 }
 async function saveSettings(event) {
   event.preventDefault();
+  const uploadMiB = Number($('settingUploadMaxFileSize').value);
+  if (!Number.isInteger(uploadMiB) || uploadMiB < 1 || uploadMiB > 200) return message('最大 ZIP 单文件大小必须是 1–200 之间的整数', 'error');
   try {
-    await request('/api/admin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branding: { name: $('settingName').value, description: $('settingDescription').value, footer: $('settingFooter').value }, home: { title: $('settingHomeTitle').value, description: $('settingHomeDescription').value, layout: $('settingLayout').value, showPreview: $('settingPreview').checked }, appearance: { defaultTheme: $('settingTheme').value, allowThemeSwitch: $('settingThemeSwitch').checked, accentColor: $('settingAccent').value } }) });
+    await request('/api/admin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branding: { name: $('settingName').value, description: $('settingDescription').value, footer: $('settingFooter').value }, home: { title: $('settingHomeTitle').value, description: $('settingHomeDescription').value, layout: $('settingLayout').value, showPreview: $('settingPreview').checked }, appearance: { defaultTheme: $('settingTheme').value, allowThemeSwitch: $('settingThemeSwitch').checked, accentColor: $('settingAccent').value }, uploads: { maxFileSize: uploadMiB * 1024 * 1024 } }) });
+    await loadUploadConfig();
     message('全站设置已保存');
   } catch (error) { message(error.message, 'error'); }
 }
@@ -228,25 +240,77 @@ function userCard(user) {
 async function loadUsers(force = false) { if (state.user.role !== 'admin') return; if (force) state.loadedViews.delete('users'); const { users } = await request('/api/users'); $('usersList').replaceChildren(...users.map(userCard)); state.loadedViews.add('users'); }
 
 function uploadMode() { return $('uploadModeCode').checked ? 'code' : 'zip'; }
+function updateUploadButton() {
+  const oversized = uploadMode() === 'zip' && state.selectedFile && state.uploadConfig && state.selectedFile.size > state.uploadConfig.maxFileSize;
+  $('uploadBtn').disabled = state.uploading || Boolean(oversized);
+}
+function resetUploadProgress() {
+  const progress = $('uploadProgress');
+  progress.hidden = true; progress.setAttribute('aria-valuenow', '0');
+  $('uploadProgressBar').style.width = '0%'; $('uploadProgressPercent').textContent = '0%'; $('uploadProgressText').textContent = '准备上传';
+}
+function showUploadProgress(loaded, total) {
+  const percent = total > 0 ? Math.min(100, Math.round(loaded / total * 100)) : 0;
+  const progress = $('uploadProgress');
+  progress.hidden = false; progress.setAttribute('aria-valuenow', String(percent));
+  $('uploadProgressBar').style.width = `${percent}%`; $('uploadProgressPercent').textContent = `${percent}%`;
+  $('uploadProgressText').textContent = total > 0 ? `${formatBytes(loaded)} / ${formatBytes(total)}` : `已上传 ${formatBytes(loaded)}`;
+}
+async function loadUploadConfig() {
+  const { uploads } = await request('/api/upload-config');
+  state.uploadConfig = uploads;
+  $('uploadLimitHint').textContent = `最大 ${formatBytes(uploads.maxFileSize)} · 根目录需包含 index.html`;
+  if (state.selectedFile) selectFile(state.selectedFile);
+}
 function setUploadMode() {
   const code = uploadMode() === 'code';
   $('zipUploadPane').hidden = code; $('codeUploadPane').hidden = !code;
   $('siteName').required = code; $('codeHtml').required = code;
   $('uploadBtn').textContent = code ? '从代码创建草稿' : '上传 ZIP 为草稿';
-  errorBox('uploadError');
+  resetUploadProgress(); errorBox('uploadError'); updateUploadButton();
 }
 function setupUpload() {
   $('uploadArea').addEventListener('click', () => $('fileInput').click()); $('uploadArea').addEventListener('keydown', (event) => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); $('fileInput').click(); } });
   $('fileInput').addEventListener('change', () => selectFile($('fileInput').files[0])); $('uploadArea').addEventListener('dragover', (event) => { event.preventDefault(); $('uploadArea').dataset.dragover = 'true'; }); $('uploadArea').addEventListener('dragleave', () => $('uploadArea').dataset.dragover = 'false'); $('uploadArea').addEventListener('drop', (event) => { event.preventDefault(); $('uploadArea').dataset.dragover = 'false'; selectFile(event.dataTransfer.files[0]); });
   document.querySelectorAll('[name="uploadMode"]').forEach((input) => input.addEventListener('change', setUploadMode)); setUploadMode();
 }
-function selectFile(file) { if (!file?.name.toLowerCase().endsWith('.zip')) { state.selectedFile = null; $('fileInput').value = ''; $('fileName').hidden = true; return errorBox('uploadError', '请选择 ZIP 文件'); } state.selectedFile = file; $('fileName').textContent = file.name; $('fileName').hidden = false; errorBox('uploadError'); if (!$('siteName').value) $('siteName').value = file.name.replace(/\.zip$/i, ''); }
-function resetUpload() { state.selectedFile = null; $('fileInput').value = ''; $('siteName').value = ''; $('siteDescription').value = ''; $('codeHtml').value = ''; $('codeCss').value = ''; $('codeJavascript').value = ''; $('fileName').hidden = true; errorBox('uploadError'); }
+function selectFile(file) {
+  if (!file?.name.toLowerCase().endsWith('.zip')) {
+    state.selectedFile = null; $('fileInput').value = ''; $('fileName').hidden = true; updateUploadButton();
+    return errorBox('uploadError', '请选择 ZIP 文件');
+  }
+  state.selectedFile = file; $('fileName').textContent = `${file.name} · ${formatBytes(file.size)}`; $('fileName').hidden = false;
+  const limit = state.uploadConfig?.maxFileSize;
+  errorBox('uploadError', limit && file.size > limit ? `文件大小为 ${formatBytes(file.size)}，超过当前限制 ${formatBytes(limit)}` : '');
+  updateUploadButton();
+  if (!$('siteName').value) $('siteName').value = file.name.replace(/\.zip$/i, '');
+}
+function resetUpload() {
+  state.selectedFile = null; $('fileInput').value = ''; $('siteName').value = ''; $('siteDescription').value = ''; $('codeHtml').value = ''; $('codeCss').value = ''; $('codeJavascript').value = ''; $('fileName').hidden = true; errorBox('uploadError'); resetUploadProgress(); updateUploadButton();
+}
 function codeBlob(content, type) { return new Blob([content], { type: `${type};charset=utf-8` }); }
+function uploadRequest(url, form) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url); xhr.withCredentials = true; xhr.setRequestHeader('X-CSRF-Token', cookie('zcode_csrf'));
+    xhr.upload.addEventListener('progress', (event) => showUploadProgress(event.loaded, event.lengthComputable ? event.total : 0));
+    xhr.addEventListener('load', () => {
+      let data;
+      try { data = JSON.parse(xhr.responseText); } catch { data = { error: xhr.responseText.trim() }; }
+      if (xhr.status === 401) { location.replace('/login'); return reject(new Error('登录已过期')); }
+      if (xhr.status < 200 || xhr.status >= 300) return reject(Object.assign(new Error(data.error || `操作失败 (${xhr.status})`), { status: xhr.status }));
+      showUploadProgress(1, 1); resolve(data);
+    });
+    xhr.addEventListener('error', () => reject(new Error('网络错误，上传未完成')));
+    xhr.addEventListener('abort', () => reject(new Error('上传已取消')));
+    xhr.send(form);
+  });
+}
 async function uploadSite(event) {
   event.preventDefault(); errorBox('uploadError');
   const code = uploadMode() === 'code';
   if (!code && !state.selectedFile) return errorBox('uploadError', '请先选择 ZIP 文件');
+  if (!code && state.uploadConfig && state.selectedFile.size > state.uploadConfig.maxFileSize) return selectFile(state.selectedFile);
   if (code && !$('codeHtml').value.trim()) return errorBox('uploadError', '请粘贴 HTML 代码');
   if (code && !$('siteName').value.trim()) return errorBox('uploadError', '站点名称不能为空');
   const form = new FormData();
@@ -256,13 +320,15 @@ async function uploadSite(event) {
     if ($('codeJavascript').value) form.append('javascript', codeBlob($('codeJavascript').value, 'text/javascript'), 'script.js');
   } else form.append('file', state.selectedFile);
   form.append('name', $('siteName').value); form.append('description', $('siteDescription').value);
-  const submit = $('uploadBtn'); submit.disabled = true; $('resetBtn').disabled = true; $('uploadForm').setAttribute('aria-busy', 'true');
+  state.uploading = true; updateUploadButton(); $('resetBtn').disabled = true; $('uploadModeZip').disabled = true; $('uploadModeCode').disabled = true; $('uploadForm').setAttribute('aria-busy', 'true');
+  if (!code) showUploadProgress(0, state.selectedFile.size);
   try {
-    await request(code ? '/api/sites/code' : '/api/sites', { method: 'POST', body: form });
+    if (code) await request('/api/sites/code', { method: 'POST', body: form });
+    else await uploadRequest('/api/sites', form);
     resetUpload(); message(code ? '代码站点已创建为草稿' : '站点已上传为草稿');
     try { await loadSites(); } catch (error) { message(`站点已创建，但列表刷新失败：${error.message}`, 'error'); }
   } catch (error) { errorBox('uploadError', error.message); }
-  finally { submit.disabled = false; $('resetBtn').disabled = false; $('uploadForm').removeAttribute('aria-busy'); }
+  finally { state.uploading = false; $('resetBtn').disabled = false; $('uploadModeZip').disabled = false; $('uploadModeCode').disabled = false; $('uploadForm').removeAttribute('aria-busy'); updateUploadButton(); }
 }
 
 function openEditSite(site) { $('editSiteId').value = site.id; $('editSiteName').value = site.name; $('editSiteDescription').value = site.description || ''; $('editSiteDialog').showModal(); }
@@ -283,5 +349,5 @@ function bindEvents() {
   document.querySelectorAll('[data-close-dialog]').forEach((el) => el.addEventListener('click', () => closeDialog(el.closest('dialog')))); document.querySelectorAll('[data-remove-asset]').forEach((el) => el.addEventListener('click', () => removeAsset(el.dataset.removeAsset)));
   setupUpload();
 }
-async function init() { bindEvents(); try { await loadMe(); await showView(); } catch (error) { message(error.message, 'error'); } }
+async function init() { bindEvents(); try { await loadMe(); await loadUploadConfig(); await showView(); } catch (error) { message(error.message, 'error'); } }
 document.addEventListener('DOMContentLoaded', init);

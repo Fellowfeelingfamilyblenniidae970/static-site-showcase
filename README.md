@@ -42,6 +42,8 @@
 ### 静态网站发布
 
 - 上传包含 `index.html` 的 ZIP 项目并自动解压部署。
+- 管理员可在后台设置 1–200 MiB 的 ZIP 单文件上传上限，上传页同步显示当前限制。
+- 选择 ZIP 后显示文件名与文件大小，上传过程中显示真实进度、百分比和已上传字节数。
 - 直接在后台粘贴 HTML、CSS、JavaScript 创建网站。
 - 新建作品默认保存为草稿，确认预览效果后再公开发布。
 - 可独立控制作品是否公开源代码。
@@ -120,26 +122,26 @@ npm start
 
 ### 一键 Docker 部署
 
-公开镜像：`docker.io/epiphany131/static-site-showcase:1.2.0`，支持 `linux/amd64` 和 `linux/arm64`。
+公开镜像：`docker.io/epiphany131/static-site-showcase:1.3.0`，支持 `linux/amd64` 和 `linux/arm64`。
 
 默认 HTTP 会监听所有地址 `0.0.0.0:3000`，部署完成后任何能访问该服务器端口的人都可以通过服务器 IP 直接打开：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
 如需只允许服务器本机访问，增加 `--local-http`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http --local-http
 ```
 
 域名 + Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -167,7 +169,7 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.3.0
 ```
 
 也可以克隆源码并执行 `docker compose up -d --build`。完整说明请查看 [Docker 部署文档](DOCKER.md)。
@@ -179,10 +181,12 @@ sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
 1. 使用管理员或编辑者账号登录后台。
 2. 在部署面板中选择 **ZIP 上传**。
 3. 填写作品名称和介绍。
-4. 上传根目录包含 `index.html` 的 ZIP 文件。
+4. 上传根目录包含 `index.html` 的 ZIP 文件。选择后页面会显示文件名、大小和当前上限，上传时显示真实进度。
 5. 创建完成后先预览作品，再根据需要设置源码可见性并发布。
 
-上传过程会限制：
+管理员可在 **全站设置** 中将最大 ZIP 单文件上传大小设为 1–200 MiB；设置保存后下一次上传立即生效，无需重启服务。编辑者可在上传页查看当前限制，但不能修改。
+
+上传过程还会限制：
 
 - ZIP 条目数量；
 - 单文件解压大小；
@@ -229,20 +233,20 @@ script.js
 | --- | --- | --- |
 | `PORT` | `3000` | Node.js HTTP 端口 |
 | `NODE_ENV` | `development` | 运行环境 |
-| `MAX_FILE_SIZE` | `52428800` | ZIP 上传大小上限（字节） |
+| `MAX_FILE_SIZE` | `52428800` | 新数据库或旧设置首次迁移时的 ZIP 上传上限初始值（字节）；之后由后台设置管理 |
 | `DB_PATH` | `./database/platform.db` | SQLite 数据库路径 |
 | `ADMIN_USERNAME` | `admin` | 初始管理员用户名 |
 | `ADMIN_PASSWORD` | 新数据库必填 | 初始管理员密码 |
 | `COOKIE_SECURE` | `false` | 为 `true` 时仅通过 HTTPS 发送 Cookie |
 | `TRUST_PROXY` | `0` | 设置为 `1` 时信任一层反向代理 |
 | `STATIC_HOST_IMAGE` | Docker Hub 官方镜像 | 高级覆盖；通常保持默认 |
-| `IMAGE_TAG` | `1.2.0` | Docker 镜像版本；生产环境建议固定 SemVer |
+| `IMAGE_TAG` | `1.3.0` | Docker 镜像版本；生产环境建议固定 SemVer |
 | `HTTP_BIND` | `0.0.0.0` | Docker HTTP 宿主机监听地址；设为 `127.0.0.1` 可限制为本机 |
 | `HTTP_PORT` | `3000` | Docker HTTP 宿主机端口 |
 | `PLATFORM_ORIGIN` | 无 | Caddy HTTPS 域名，不包含协议或路径 |
 | `ACME_EMAIL` | 无 | Caddy ACME 联系邮箱 |
 
-> 修改 `ADMIN_USERNAME` 或 `ADMIN_PASSWORD` 不会覆盖已有数据库中的账号。已有用户应通过后台账号设置修改凭据。
+> 修改 `ADMIN_USERNAME` 或 `ADMIN_PASSWORD` 不会覆盖已有数据库中的账号。已有用户应通过后台账号设置修改凭据。`MAX_FILE_SIZE` 也只用于初始化缺少上传配置的数据库；数据库已有 `uploads.maxFileSize` 后，修改环境变量不会覆盖后台保存的值。
 
 ## HTTPS 生产部署
 
@@ -339,6 +343,8 @@ GitHub Actions 会在以下环境中运行完整测试：
 | `PATCH /api/auth/profile` | 修改当前用户名 |
 | `POST /api/auth/change-password` | 修改当前密码 |
 | `GET /api/sites` | 获取有权管理的作品 |
+| `GET /api/upload-config` | 获取当前账号可用的 ZIP 上传限制 |
+| `GET/PATCH /api/admin/settings` | 管理全站设置和 ZIP 上传上限（仅管理员） |
 | `POST /api/sites` | 上传 ZIP 网站 |
 | `POST /api/sites/code` | 通过粘贴代码创建网站 |
 | `PATCH /api/sites/:id` | 修改发布状态、源码可见性或元数据 |

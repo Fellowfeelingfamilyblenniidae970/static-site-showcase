@@ -7,21 +7,21 @@
 默认 HTTP 监听所有地址 `0.0.0.0:3000`，部署后可通过 `http://服务器IP:3000/` 直接访问：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
 如需只允许服务器本机访问，显式添加 `--local-http`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http --local-http
 ```
 
 使用域名和 Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -51,7 +51,7 @@ sudo bash deploy.sh install --mode http --port 3000 \
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.3.0
 ```
 
 一键安装会把脚本副本保存到安装目录。升级前会创建一致性备份，失败时恢复旧镜像版本；不会删除数据卷。
@@ -77,3 +77,5 @@ npm start
 - 健康检查：<http://localhost:3000/health>
 
 新作品默认是草稿，需要在后台预览后手动发布。初始环境凭据只在数据库尚无用户时生效。
+
+管理员可在 **全站设置** 中配置 1–200 MiB 的 ZIP 单文件上传上限。上传页面会同步显示限制、所选文件名与大小，并在传输过程中显示进度条；设置保存后无需重启。

@@ -8,7 +8,7 @@ docker.io/epiphany131/static-site-showcase
 
 支持平台：`linux/amd64`、`linux/arm64`。
 
-生产部署建议固定完整版本（例如 `1.2.0`），而不是长期跟踪 `latest`。
+生产部署建议固定完整版本（例如 `1.3.0`），而不是长期跟踪 `latest`。
 
 ## 一键部署
 
@@ -24,11 +24,11 @@ docker.io/epiphany131/static-site-showcase
 
 默认 HTTP 会对所有网卡公开端口，其他设备可以通过服务器 IP 直接访问。默认密码 `123456` 很容易被猜到，任何能访问该端口的人都可以尝试登录；请在安装时输入强密码或首次登录后立即在 **账号设置** 中修改，公网部署建议使用 HTTPS。也可以用 `--port`、`--admin-username`、`--admin-password` 在命令行直接指定，用 `--yes` 跳过全部提示并接受默认值。只有显式使用 `--local-http` 时才限制为 `127.0.0.1`。
 
-以下命令固定到 Git 标签 `v1.2.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
+以下命令固定到 Git 标签 `v1.3.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
 
 ```bash
 mkdir static-site-showcase-installer && cd static-site-showcase-installer
-base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0
+base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0
 for file in deploy.sh deploy-assets.sha256 docker-compose.yml docker-compose.production.yml Caddyfile; do
   curl -fSLO "$base/$file"
 done
@@ -43,7 +43,7 @@ sudo bash deploy.sh install --mode http
 默认监听 `0.0.0.0:3000`，部署完成后可直接通过 `http://服务器IP:3000/` 访问：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
@@ -54,7 +54,7 @@ HTTP 登录流量不会被传输层加密。任何能访问该端口的人都可
 只有显式传入 `--local-http` 才限制监听 `127.0.0.1:3000`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode http --local-http
 ```
 
@@ -63,7 +63,7 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 域名 DNS 必须指向服务器，并开放 TCP 80/443 和 UDP 443：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -109,13 +109,15 @@ sudo bash deploy.sh install --mode http --port 8080 \
 
 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 只负责空数据库中的首个管理员。修改 `.env` 不会覆盖已有账号。
 
+`MAX_FILE_SIZE` 默认是 `52428800`（50 MiB），仅用于新数据库或旧设置首次迁移时初始化 ZIP 上传上限。管理员可在后台 **全站设置** 中将上限改为 1–200 MiB；数据库已有设置后，修改 `.env` 不会覆盖后台值。上传页面会显示当前限制、所选文件大小和真实上传进度。HTML/CSS/JavaScript 粘贴上传仍使用独立的 512 KiB 单文件限制，Logo/Favicon 仍为 2 MiB。
+
 ## 运维命令
 
 ```bash
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.3.0
 ```
 
 自定义安装目录时，每次命令使用相同的 `--dir`：
@@ -167,7 +169,7 @@ cp .env.example .env
 编辑 `.env`：
 
 ```env
-IMAGE_TAG=1.2.0
+IMAGE_TAG=1.3.0
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=replace-with-a-long-random-password
 HTTP_BIND=0.0.0.0
@@ -215,7 +217,7 @@ docker run -d \
   -v "$PWD/sites:/app/sites" \
   -v "$PWD/uploads:/app/uploads" \
   --restart unless-stopped \
-  epiphany131/static-site-showcase:1.2.0
+  epiphany131/static-site-showcase:1.3.0
 ```
 
 镜像内置健康检查。查看状态：

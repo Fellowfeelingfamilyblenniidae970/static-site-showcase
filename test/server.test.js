@@ -54,6 +54,13 @@ async function login(base, username='admin', password='123456', origin) {
 }
 
 function secureHeaders(_base, session) { return { Cookie:session.header, 'X-CSRF-Token':session.csrf, 'Content-Type':'application/json' }; }
+async function waitForEmptyDir(directory) {
+  for (let attempt=0;attempt<50;attempt+=1) {
+    if ((await fs.readdir(directory)).length===0) return;
+    await new Promise((resolve)=>setTimeout(resolve,10));
+  }
+  assert.deepEqual(await fs.readdir(directory),[]);
+}
 function hostRequest(base, host, pathname='/', options={}) {
   const port = new URL(base).port;
   return new Promise((resolve, reject) => {
@@ -220,6 +227,29 @@ test('移除后的域名 API 返回 404',async(t)=>{
   assert.equal(response.status,404);
 });
 
+test('管理员可设置 ZIP 上传限制，编辑者只可读取当前限制',async(t)=>{
+  const {base}=await fixture(t); const admin=await login(base);
+  assert.equal((await fetch(`${base}/api/upload-config`)).status,401);
+  const publicSettings=await (await fetch(`${base}/api/settings`)).json();
+  assert.equal(publicSettings.settings.uploads,undefined);
+  const adminSettings=await fetch(`${base}/api/admin/settings`,{headers:{Cookie:admin.header}}); const adminBody=await adminSettings.json();
+  assert.equal(adminSettings.status,200); assert.equal(adminSettings.headers.get('cache-control'),'no-store'); assert.equal(adminBody.settings.uploads.maxFileSize,50*1024*1024);
+  const noCsrf=await fetch(`${base}/api/admin/settings`,{method:'PATCH',headers:{Cookie:admin.header,'Content-Type':'application/json'},body:JSON.stringify({uploads:{maxFileSize:8*1024*1024}})});
+  assert.equal(noCsrf.status,403);
+  const invalid=await fetch(`${base}/api/admin/settings`,{method:'PATCH',headers:secureHeaders(base,admin),body:JSON.stringify({uploads:{maxFileSize:0}})});
+  assert.equal(invalid.status,400);
+  const updated=await fetch(`${base}/api/admin/settings`,{method:'PATCH',headers:secureHeaders(base,admin),body:JSON.stringify({uploads:{maxFileSize:8*1024*1024}})});
+  assert.equal(updated.status,200); assert.equal((await updated.json()).settings.uploads.maxFileSize,8*1024*1024);
+
+  await fetch(`${base}/api/users`,{method:'POST',headers:secureHeaders(base,admin),body:JSON.stringify({username:'upload_editor',password:'abcdef',role:'editor'})});
+  const editor=await login(base,'upload_editor','abcdef');
+  const config=await fetch(`${base}/api/upload-config`,{headers:{Cookie:editor.header}}); const configBody=await config.json();
+  assert.equal(config.status,200); assert.equal(config.headers.get('cache-control'),'no-store'); assert.equal(configBody.uploads.maxFileSize,8*1024*1024);
+  assert.equal(configBody.uploads.minFileSize,1024*1024); assert.equal(configBody.uploads.maxAllowedFileSize,200*1024*1024);
+  assert.equal((await fetch(`${base}/api/admin/settings`,{headers:{Cookie:editor.header}})).status,403);
+  assert.equal((await fetch(`${base}/api/admin/settings`,{method:'PATCH',headers:secureHeaders(base,editor),body:JSON.stringify({uploads:{maxFileSize:9*1024*1024}})})).status,403);
+});
+
 test('页面管理 CRUD 保持管理员权限与 CSRF 校验',async(t)=>{
   const {base}=await fixture(t); const admin=await login(base);
   const unauthenticated=await fetch(`${base}/api/admin/pages`); assert.equal(unauthenticated.status,401);
@@ -324,11 +354,45 @@ test('托管站点的所有文件统一使用 sandbox CSP，避免活动文档�
   }
 });
 
-test('站点上传拒绝多个 file 字段并要求非空名称',async(t)=>{
-  const {base}=await fixture(t); const admin=await login(base);
+test('站点上传拒绝多个 file 字段并清理临时文件',async(t)=>{
+  const {base,root}=await fixture(t); const admin=await login(base);
   const duplicate=new FormData(); duplicate.append('file',new Blob(['one']), 'one.zip'); duplicate.append('file',new Blob(['two']), 'two.zip');
   const duplicateResponse=await fetch(`${base}/api/sites`,{method:'POST',headers:{Origin:base,Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:duplicate});
-  assert.equal(duplicateResponse.status,400);
+  assert.equal(duplicateResponse.status,400); await waitForEmptyDir(path.join(root,'uploads'));
+  const unknown=new FormData(); unknown.append('file',new Blob(['one']),'one.zip'); unknown.append('asset',new Blob(['two']),'asset.zip');
+  const unknownResponse=await fetch(`${base}/api/sites`,{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:unknown});
+  assert.equal(unknownResponse.status,400); await waitForEmptyDir(path.join(root,'uploads'));
+  const unknownField=new FormData(); unknownField.append('file',new Blob(['one']),'one.zip'); unknownField.append('published','true');
+  assert.equal((await fetch(`${base}/api/sites`,{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:unknownField})).status,400);
+  const repeatedName=new FormData(); repeatedName.append('file',new Blob(['one']),'one.zip'); repeatedName.append('name','First'); repeatedName.append('name','Second');
+  assert.equal((await fetch(`${base}/api/sites`,{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:repeatedName})).status,400);
+  await waitForEmptyDir(path.join(root,'uploads'));
+});
+
+test('畸形 multipart 返回 400 并清理解析阶段的 ZIP 临时文件',async(t)=>{
+  const {base,root}=await fixture(t); const admin=await login(base); const boundary='zcode-truncated-boundary';
+  const payload=Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="test.zip"\r\nContent-Type: application/zip\r\n\r\nPK-test-data\r\n--${boundary}\r\nContent-Disposition: form-data; name="name"\r\n\r\ntruncated`);
+  const response=await hostRequest(base,'localhost','/api/sites',{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf,'Content-Type':`multipart/form-data; boundary=${boundary}`,'Content-Length':String(payload.length)},body:payload});
+  assert.equal(response.status,400); assert.match(response.body,/上传数据格式无效/); await waitForEmptyDir(path.join(root,'uploads'));
+
+  const activeBoundary='zcode-active-file-truncated';
+  const activePayload=Buffer.from(`--${activeBoundary}\r\nContent-Disposition: form-data; name="file"; filename="active.zip"\r\nContent-Type: application/zip\r\n\r\nPK-file-content-without-closing-boundary`);
+  const activeResponse=await hostRequest(base,'localhost','/api/sites',{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf,'Content-Type':`multipart/form-data; boundary=${activeBoundary}`,'Content-Length':String(activePayload.length)},body:activePayload});
+  assert.equal(activeResponse.status,400); assert.match(activeResponse.body,/上传数据格式无效|ZIP 文件读取失败/); await waitForEmptyDir(path.join(root,'uploads'));
+});
+
+test('ZIP 上传限制在后台修改后无需重启即返回 413 且不留残余',async(t)=>{
+  const {base,db,root}=await fixture(t); const admin=await login(base);
+  const before=await fetch(`${base}/api/upload-config`,{headers:{Cookie:admin.header}}); assert.equal((await before.json()).uploads.maxFileSize,50*1024*1024);
+  const changed=await fetch(`${base}/api/admin/settings`,{method:'PATCH',headers:secureHeaders(base,admin),body:JSON.stringify({uploads:{maxFileSize:1024*1024}})});
+  assert.equal(changed.status,200); assert.equal(db.getSettings().uploads.maxFileSize,1024*1024);
+  const exact=new FormData(); exact.append('name','Exact boundary'); exact.append('file',new Blob([new Uint8Array(1024*1024)]),'exact.zip');
+  const exactResponse=await fetch(`${base}/api/sites`,{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:exact});
+  assert.equal(exactResponse.status,400); assert.doesNotMatch((await exactResponse.json()).error,/不能超过/); await waitForEmptyDir(path.join(root,'uploads'));
+  const form=new FormData(); form.append('name','Too large'); form.append('file',new Blob([new Uint8Array(1024*1024+1)]),'large.zip');
+  const response=await fetch(`${base}/api/sites`,{method:'POST',headers:{Cookie:admin.header,'X-CSRF-Token':admin.csrf},body:form});
+  assert.equal(response.status,413); assert.match(await response.text(),/1 MiB/);
+  assert.equal((await db.getAllSites()).length,0); assert.deepEqual(await fs.readdir(path.join(root,'sites')),[]); await waitForEmptyDir(path.join(root,'uploads'));
 });
 
 test('管理员可粘贴三类代码创建草稿站点并保留 UTF-8 内容',async(t)=>{

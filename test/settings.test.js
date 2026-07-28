@@ -1,15 +1,18 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  DEFAULT_SETTINGS, normalizeSettings, patchSettings, projectPublicSettings
+  DEFAULT_SETTINGS, MIN_UPLOAD_MAX_FILE_SIZE, DEFAULT_UPLOAD_MAX_FILE_SIZE,
+  MAX_UPLOAD_MAX_FILE_SIZE, uploadMaxFileSizeFromEnv, normalizeSettings, patchSettings, projectPublicSettings
 } = require('../lib/settings');
 
-test('默认设置包含完整的品牌、首页和外观配置且不可修改', () => {
-  assert.deepEqual(Object.keys(DEFAULT_SETTINGS), ['branding', 'home', 'appearance']);
+test('默认设置包含完整的品牌、首页、外观和上传配置且不可修改', () => {
+  assert.deepEqual(Object.keys(DEFAULT_SETTINGS), ['branding', 'home', 'appearance', 'uploads']);
   assert.equal(DEFAULT_SETTINGS.home.layout, 'editorial');
   assert.equal(DEFAULT_SETTINGS.home.showPreview, true);
   assert.equal(DEFAULT_SETTINGS.appearance.defaultTheme, 'system');
+  assert.equal(DEFAULT_SETTINGS.uploads.maxFileSize, DEFAULT_UPLOAD_MAX_FILE_SIZE);
   assert.equal(Object.isFrozen(DEFAULT_SETTINGS.branding), true);
+  assert.equal(Object.isFrozen(DEFAULT_SETTINGS.uploads), true);
 });
 
 test('规范化旧的扁平设置并为缺失或损坏值补默认值', () => {
@@ -24,6 +27,19 @@ test('规范化旧的扁平设置并为缺失或损坏值补默认值', () => {
   assert.equal(settings.home.title, DEFAULT_SETTINGS.home.title);
   assert.equal(settings.appearance.defaultTheme, 'dark');
   assert.equal(settings.appearance.accentColor, '#abcdef');
+  assert.equal(settings.uploads.maxFileSize, DEFAULT_UPLOAD_MAX_FILE_SIZE);
+});
+
+test('上传限制支持环境默认值并严格校验整数边界', () => {
+  assert.equal(uploadMaxFileSizeFromEnv({ MAX_FILE_SIZE: String(12 * 1024 * 1024) }), 12 * 1024 * 1024);
+  assert.equal(uploadMaxFileSizeFromEnv({ MAX_FILE_SIZE: '0' }), DEFAULT_UPLOAD_MAX_FILE_SIZE);
+  assert.equal(uploadMaxFileSizeFromEnv({ MAX_FILE_SIZE: 'not-a-number' }), DEFAULT_UPLOAD_MAX_FILE_SIZE);
+  assert.equal(normalizeSettings({}, { uploadMaxFileSize: 12 * 1024 * 1024 }).uploads.maxFileSize, 12 * 1024 * 1024);
+  assert.equal(patchSettings({}, { uploads: { maxFileSize: MIN_UPLOAD_MAX_FILE_SIZE } }).uploads.maxFileSize, MIN_UPLOAD_MAX_FILE_SIZE);
+  assert.equal(patchSettings({}, { uploads: { maxFileSize: MAX_UPLOAD_MAX_FILE_SIZE } }).uploads.maxFileSize, MAX_UPLOAD_MAX_FILE_SIZE);
+  for (const value of [MIN_UPLOAD_MAX_FILE_SIZE - 1, MAX_UPLOAD_MAX_FILE_SIZE + 1, MIN_UPLOAD_MAX_FILE_SIZE + 1, 1.5, '52428800']) {
+    assert.throws(() => patchSettings({}, { uploads: { maxFileSize: value } }), { code: 'INVALID_SETTING', path: 'uploads.maxFileSize' });
+  }
 });
 
 test('PATCH 仅深合并白名单字段且不改变原对象', () => {
@@ -54,6 +70,7 @@ test('公开投影只返回规范化的公开结构和副本', () => {
   const projected = projectPublicSettings({ branding: { name: '公开名称' }, adminToken: 'secret' });
   assert.deepEqual(Object.keys(projected), ['branding', 'home', 'appearance']);
   assert.equal(projected.branding.name, '公开名称');
+  assert.equal(projected.uploads, undefined);
   assert.equal(projected.adminToken, undefined);
   assert.notEqual(projected, DEFAULT_SETTINGS);
 });
