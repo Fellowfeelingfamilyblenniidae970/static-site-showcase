@@ -4,24 +4,24 @@
 
 要求：Linux、Docker Engine、Docker Compose v2 和 curl。
 
-默认安全 HTTP 模式仅监听服务器本机 `127.0.0.1:3000`：
+默认 HTTP 监听所有地址 `0.0.0.0:3000`，部署后可通过 `http://服务器IP:3000/` 直接访问：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
-如需直接通过服务器 IP 访问，可显式开放 HTTP（登录流量不会加密）：
+如需只允许服务器本机访问，显式添加 `--local-http`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
-  | sudo bash -s -- install --mode http --public-http
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+  | sudo bash -s -- install --mode http --local-http
 ```
 
 使用域名和 Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -31,6 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 
 | 提示 | 默认值 |
 | --- | --- |
+| HTTP 监听 | `0.0.0.0`（所有地址） |
 | HTTP 端口 | `3000` |
 | 管理员用户名 | `admin` |
 | 管理员密码 | `123456` |
@@ -50,7 +51,7 @@ sudo bash deploy.sh install --mode http --port 3000 \
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.1.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
 ```
 
 一键安装会把脚本副本保存到安装目录。升级前会创建一致性备份，失败时恢复旧镜像版本；不会删除数据卷。

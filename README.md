@@ -120,19 +120,26 @@ npm start
 
 ### 一键 Docker 部署
 
-公开镜像：`docker.io/epiphany131/static-site-showcase:1.1.0`，支持 `linux/amd64` 和 `linux/arm64`。
+公开镜像：`docker.io/epiphany131/static-site-showcase:1.2.0`，支持 `linux/amd64` 和 `linux/arm64`。
 
-默认安全 HTTP 模式仅监听服务器本机 `127.0.0.1:3000`：
+默认 HTTP 会监听所有地址 `0.0.0.0:3000`，部署完成后任何能访问该服务器端口的人都可以通过服务器 IP 直接打开：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode http
+```
+
+如需只允许服务器本机访问，增加 `--local-http`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+  | sudo bash -s -- install --mode http --local-http
 ```
 
 域名 + Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -143,13 +150,14 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 | 提示项 | 默认值 |
 | --- | --- |
 | 部署模式 | `http` |
+| HTTP 监听 | `0.0.0.0`（所有地址） |
 | HTTP 端口 | `3000` |
 | 管理员用户名 | `admin` |
 | 管理员密码 | `123456` |
 
-默认密码 `123456` 只适合本机试用。它很容易被猜到，请在首次登录后立即通过 **账号设置** 修改；如果服务对外可访问，请在安装时就输入强密码。也可以使用 `--port`、`--admin-username`、`--admin-password` 直接指定，配合 `--yes` 可完全跳过提示。
+默认 HTTP 是明文传输，默认密码 `123456` 很容易被猜到。任何能访问该端口的人都可以尝试登录，请在安装时输入强密码或首次登录后立即通过 **账号设置** 修改；面向互联网时推荐 HTTPS。也可以使用 `--port`、`--admin-username`、`--admin-password` 直接指定，配合 `--yes` 可完全跳过提示。
 
-数据默认保存在 `/opt/static-site-showcase`。如需直接通过服务器 IP 的明文 HTTP 访问，可增加 `--public-http`；面向互联网时推荐 HTTPS。
+数据默认保存在 `/opt/static-site-showcase`。`--public-http` 作为兼容参数仍可明确选择公开监听，但现在不再是必需参数。
 
 安装和升级会下载同一 Git 标签下的 Compose、Caddy 和脚本文件，并使用 `deploy-assets.sha256` 逐项校验后才替换。修改操作使用互斥锁；升级前会创建一致性备份，失败时恢复旧部署文件、旧镜像标签并重新确认健康状态。需要在执行前审阅脚本时，请使用 [Docker 部署文档](DOCKER.md) 中的“下载、校验、再执行”流程。
 
@@ -159,7 +167,7 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.1.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
 ```
 
 也可以克隆源码并执行 `docker compose up -d --build`。完整说明请查看 [Docker 部署文档](DOCKER.md)。
@@ -228,8 +236,8 @@ script.js
 | `COOKIE_SECURE` | `false` | 为 `true` 时仅通过 HTTPS 发送 Cookie |
 | `TRUST_PROXY` | `0` | 设置为 `1` 时信任一层反向代理 |
 | `STATIC_HOST_IMAGE` | Docker Hub 官方镜像 | 高级覆盖；通常保持默认 |
-| `IMAGE_TAG` | `1.0.0` | Docker 镜像版本；生产环境建议固定 SemVer |
-| `HTTP_BIND` | `127.0.0.1` | Docker HTTP 宿主机监听地址 |
+| `IMAGE_TAG` | `1.2.0` | Docker 镜像版本；生产环境建议固定 SemVer |
+| `HTTP_BIND` | `0.0.0.0` | Docker HTTP 宿主机监听地址；设为 `127.0.0.1` 可限制为本机 |
 | `HTTP_PORT` | `3000` | Docker HTTP 宿主机端口 |
 | `PLATFORM_ORIGIN` | 无 | Caddy HTTPS 域名，不包含协议或路径 |
 | `ACME_EMAIL` | 无 | Caddy ACME 联系邮箱 |

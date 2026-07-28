@@ -4,7 +4,7 @@ set -Eeuo pipefail
 readonly APP_NAME="static-site-showcase"
 readonly DEFAULT_IMAGE_REPOSITORY="docker.io/epiphany131/static-site-showcase"
 readonly IMAGE_REPOSITORY="${STATIC_SHOWCASE_IMAGE_REPOSITORY:-$DEFAULT_IMAGE_REPOSITORY}"
-readonly DEFAULT_VERSION="1.1.0"
+readonly DEFAULT_VERSION="1.2.0"
 readonly DEFAULT_INSTALL_DIR="/opt/static-site-showcase"
 readonly DEFAULT_HTTP_PORT="3000"
 readonly DEFAULT_ADMIN_USERNAME="admin"
@@ -25,112 +25,117 @@ MODE=""
 DOMAIN=""
 EMAIL=""
 HTTP_PORT="$DEFAULT_HTTP_PORT"
-HTTP_BIND="127.0.0.1"
-PUBLIC_HTTP=false
+HTTP_BIND="0.0.0.0"
+LOCAL_HTTP=false
 ASSUME_YES=false
 LOCK_HELD=false
 ADMIN_USERNAME=""
 ADMIN_PASSWORD=""
 
 log() { printf '[%s] %s\n' "$APP_NAME" "$*"; }
-warn() { printf '[%s] WARNING: %s\n' "$APP_NAME" "$*" >&2; }
-die() { printf '[%s] ERROR: %s\n' "$APP_NAME" "$*" >&2; exit 1; }
+warn() { printf '[%s] 警告：%s\n' "$APP_NAME" "$*" >&2; }
+die() { printf '[%s] 错误：%s\n' "$APP_NAME" "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Static Site Showcase deployment helper
+Static Site Showcase 部署工具
 
-Usage:
-  deploy.sh install [options]
-  deploy.sh upgrade --version VERSION [options]
-  deploy.sh backup [--dir PATH]
-  deploy.sh status [--dir PATH]
-  deploy.sh logs [--dir PATH]
+用法：
+  deploy.sh install [选项]
+  deploy.sh upgrade --version 版本 [选项]
+  deploy.sh backup [--dir 路径]
+  deploy.sh status [--dir 路径]
+  deploy.sh logs [--dir 路径]
 
-Install options:
-  --mode http|https       Deployment mode
-  --public-http           Bind HTTP to 0.0.0.0 instead of 127.0.0.1
-  --port PORT             Host HTTP port (default: 3000)
-  --admin-username NAME   Initial administrator username (default: admin)
-  --admin-password PASS   Initial administrator password (default: 123456)
-  --domain DOMAIN         HTTPS domain without scheme, path, or port
-  --email EMAIL           ACME contact email for HTTPS
-  --version VERSION       Docker image version (default: 1.1.0)
-  --dir PATH              Installation directory (default: /opt/static-site-showcase)
-  --yes                   Accept non-sensitive defaults without prompting
-  -h, --help              Show this help
+安装选项：
+  --mode http|https       部署模式
+  --local-http            HTTP 仅监听 127.0.0.1；默认监听所有地址 0.0.0.0
+  --public-http           兼容选项：明确监听所有地址 0.0.0.0
+  --port 端口             宿主机 HTTP 端口（默认：3000）
+  --admin-username 用户名 初始管理员用户名（默认：admin）
+  --admin-password 密码   初始管理员密码（默认：123456）
+  --domain 域名           HTTPS 域名，不含协议、路径或端口
+  --email 邮箱            HTTPS 证书联系邮箱
+  --version 版本          Docker 镜像版本（默认：1.2.0）
+  --dir 路径              安装目录（默认：/opt/static-site-showcase）
+  --yes                   不提问，接受所有默认值
+  -h, --help              显示帮助
 
-Examples:
+默认 HTTP 会监听 0.0.0.0，部署完成后可通过服务器 IP 直接访问。
+默认密码 123456 很容易被猜到，请在首次登录后立即修改。
+
+示例：
   deploy.sh install --mode http
-  deploy.sh install --mode http --public-http
+  deploy.sh install --mode http --local-http
   deploy.sh install --mode https --domain showcase.example.com --email admin@example.com
-  deploy.sh upgrade --version 1.1.0
+  deploy.sh upgrade --version 1.2.0
   deploy.sh backup
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --mode) [[ $# -ge 2 ]] || die '--mode requires a value'; MODE="$2"; shift 2 ;;
-    --domain) [[ $# -ge 2 ]] || die '--domain requires a value'; DOMAIN="$2"; shift 2 ;;
-    --email) [[ $# -ge 2 ]] || die '--email requires a value'; EMAIL="$2"; shift 2 ;;
-    --version) [[ $# -ge 2 ]] || die '--version requires a value'; VERSION="${2#v}"; shift 2 ;;
-    --dir) [[ $# -ge 2 ]] || die '--dir requires a value'; INSTALL_DIR="$2"; shift 2 ;;
-    --port) [[ $# -ge 2 ]] || die '--port requires a value'; HTTP_PORT="$2"; shift 2 ;;
-    --admin-username) [[ $# -ge 2 ]] || die '--admin-username requires a value'; ADMIN_USERNAME="$2"; shift 2 ;;
-    --admin-password) [[ $# -ge 2 ]] || die '--admin-password requires a value'; ADMIN_PASSWORD="$2"; shift 2 ;;
-    --public-http) PUBLIC_HTTP=true; HTTP_BIND="0.0.0.0"; shift ;;
+    --mode) [[ $# -ge 2 ]] || die '--mode 需要一个值'; MODE="$2"; shift 2 ;;
+    --domain) [[ $# -ge 2 ]] || die '--domain 需要一个值'; DOMAIN="$2"; shift 2 ;;
+    --email) [[ $# -ge 2 ]] || die '--email 需要一个值'; EMAIL="$2"; shift 2 ;;
+    --version) [[ $# -ge 2 ]] || die '--version 需要一个值'; VERSION="${2#v}"; shift 2 ;;
+    --dir) [[ $# -ge 2 ]] || die '--dir 需要一个值'; INSTALL_DIR="$2"; shift 2 ;;
+    --port) [[ $# -ge 2 ]] || die '--port 需要一个值'; HTTP_PORT="$2"; shift 2 ;;
+    --admin-username) [[ $# -ge 2 ]] || die '--admin-username 需要一个值'; ADMIN_USERNAME="$2"; shift 2 ;;
+    --admin-password) [[ $# -ge 2 ]] || die '--admin-password 需要一个值'; ADMIN_PASSWORD="$2"; shift 2 ;;
+    --local-http) LOCAL_HTTP=true; HTTP_BIND="127.0.0.1"; shift ;;
+    --public-http) LOCAL_HTTP=false; HTTP_BIND="0.0.0.0"; shift ;;
     --yes|-y) ASSUME_YES=true; shift ;;
     --help|-h) usage; exit 0 ;;
-    *) die "Unknown option: $1" ;;
+    *) die "未知选项：$1" ;;
   esac
 done
 
 readonly ENV_FILE="$INSTALL_DIR/.env"
 
 require_command() {
-  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+  command -v "$1" >/dev/null 2>&1 || die "找不到必需命令：$1"
 }
 
 validate_version() {
   [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?$ ]] ||
-    die 'Version must be a semantic version such as 1.0.0 or 1.0.0-rc.1'
+    die '版本必须是 1.0.0 或 1.0.0-rc.1 这类语义化版本'
 }
 
 validate_domain() {
-  [[ -n "$DOMAIN" && ${#DOMAIN} -le 253 ]] || die 'A valid domain is required for HTTPS mode'
-  [[ "$DOMAIN" != *$'\n'* && "$DOMAIN" != *$'\r'* ]] || die 'Domain contains a newline'
+  [[ -n "$DOMAIN" && ${#DOMAIN} -le 253 ]] || die 'HTTPS 模式必须提供有效域名'
+  [[ "$DOMAIN" != *$'\n'* && "$DOMAIN" != *$'\r'* ]] || die '域名不能包含换行符'
   [[ "$DOMAIN" != *://* && "$DOMAIN" != */* && "$DOMAIN" != *:* ]] ||
-    die 'Domain must not include a scheme, path, wildcard, or port'
+    die '域名不能包含协议、路径、通配符或端口'
   [[ "$DOMAIN" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]] ||
-    die 'Domain format is invalid'
+    die '域名格式无效'
 }
 
 validate_email() {
-  [[ -n "$EMAIL" && ${#EMAIL} -le 254 ]] || die 'A valid ACME email is required for HTTPS mode'
-  [[ "$EMAIL" != *$'\n'* && "$EMAIL" != *$'\r'* ]] || die 'Email contains a newline'
+  [[ -n "$EMAIL" && ${#EMAIL} -le 254 ]] || die 'HTTPS 模式必须提供有效的证书联系邮箱'
+  [[ "$EMAIL" != *$'\n'* && "$EMAIL" != *$'\r'* ]] || die '邮箱不能包含换行符'
   [[ "$EMAIL" =~ ^[A-Za-z0-9.!#$%\&\'\'*+/=?^_\`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]] ||
-    die 'Email format is invalid'
+    die '邮箱格式无效'
 }
 
 validate_port() {
-  [[ "$HTTP_PORT" =~ ^[0-9]+$ ]] || die 'HTTP port must be numeric'
-  (( HTTP_PORT >= 1 && HTTP_PORT <= 65535 )) || die 'HTTP port must be between 1 and 65535'
+  [[ "$HTTP_PORT" =~ ^[0-9]+$ ]] || die 'HTTP 端口必须是数字'
+  (( HTTP_PORT >= 1 && HTTP_PORT <= 65535 )) || die 'HTTP 端口必须在 1 到 65535 之间'
 }
 
 preflight() {
-  [[ "$(uname -s)" == 'Linux' ]] || die 'This deployment script currently supports Linux only'
+  [[ "$(uname -s)" == 'Linux' ]] || die '当前部署脚本只支持 Linux'
   require_command docker
   require_command curl
   require_command tar
   require_command sha256sum
   require_command od
   require_command awk
-  docker compose version >/dev/null 2>&1 || die 'Docker Compose v2 is required'
-  docker info >/dev/null 2>&1 || die 'The current user cannot access the Docker daemon'
+  docker compose version >/dev/null 2>&1 || die '需要 Docker Compose v2'
+  docker info >/dev/null 2>&1 || die '当前用户无法访问 Docker 服务'
   case "$(uname -m)" in
     x86_64|amd64|aarch64|arm64) ;;
-    *) die "Unsupported CPU architecture: $(uname -m)" ;;
+    *) die "不支持的 CPU 架构：$(uname -m)" ;;
   esac
   validate_version
   validate_port
@@ -139,15 +144,15 @@ preflight() {
 check_disk_space() {
   local path="$1" available
   available="$(df -Pk "$path" | awk 'NR == 2 { print $4 }')"
-  [[ "$available" =~ ^[0-9]+$ ]] || die "Could not determine free disk space at $path"
-  (( available >= 524288 )) || die 'At least 512 MiB of free disk space is required'
+  [[ "$available" =~ ^[0-9]+$ ]] || die "无法确定 $path 的可用磁盘空间"
+  (( available >= 524288 )) || die '至少需要 512 MiB 可用磁盘空间'
 }
 
 acquire_operation_lock() {
   [[ "$LOCK_HELD" == false ]] || return 0
   require_command flock
   exec 9>"$INSTALL_DIR/.deploy.lock"
-  flock -n 9 || die "Another deployment operation is already running for $INSTALL_DIR"
+  flock -n 9 || die "$INSTALL_DIR 已有另一个部署操作正在运行"
   LOCK_HELD=true
 }
 
@@ -211,7 +216,7 @@ download_file() {
   temporary="${target}.tmp.$$"
   curl --fail --silent --show-error --location --retry 3 --connect-timeout 15 \
     "$base/$name" --output "$temporary"
-  [[ -s "$temporary" ]] || { rm -f "$temporary"; die "Downloaded file is empty: $name"; }
+  [[ -s "$temporary" ]] || { rm -f "$temporary"; die "下载的文件为空：$name"; }
   chmod 644 "$temporary"
   mv -f "$temporary" "$target"
 }
@@ -224,7 +229,7 @@ download_release_assets() {
     download_file "$name" "$target/$name"
   done
   if ! (cd "$target" && sha256sum --strict --check deploy-assets.sha256); then
-    die 'Deployment asset checksum verification failed'
+    die '部署文件 SHA-256 校验失败'
   fi
   bash -n "$target/deploy.sh"
   chmod 755 "$target/deploy.sh"
@@ -256,15 +261,15 @@ install_release_assets() {
 check_port_available() {
   local protocol="$1" port="$2"
   if ! command -v ss >/dev/null 2>&1; then
-    warn "The ss command is unavailable; ${protocol^^} port $port availability was not checked"
+    warn "找不到 ss 命令，未检查 ${protocol^^} 端口 $port 是否可用"
     return 0
   fi
   if [[ "$protocol" == 'tcp' ]]; then
     if ss -ltnH "sport = :$port" | grep -q .; then
-      die "TCP port $port is already in use"
+      die "TCP 端口 $port 已被占用"
     fi
   elif ss -lunH "sport = :$port" | grep -q .; then
-    die "UDP port $port is already in use"
+    die "UDP 端口 $port 已被占用"
   fi
 }
 
@@ -323,31 +328,30 @@ wait_for_https() {
 }
 
 ensure_installed() {
-  [[ -f "$ENV_FILE" ]] || die "No installation found at $INSTALL_DIR"
-  [[ -f "$(compose_file)" ]] || die "Deployment files are missing from $INSTALL_DIR"
+  [[ -f "$ENV_FILE" ]] || die "在 $INSTALL_DIR 找不到已安装实例"
+  [[ -f "$(compose_file)" ]] || die "$INSTALL_DIR 中缺少部署文件"
 }
 
 validate_admin_username() {
   [[ -n "$ADMIN_USERNAME" && ${#ADMIN_USERNAME} -le 32 ]] ||
-    die 'Administrator username must be 1 to 32 characters'
+    die '管理员用户名长度必须为 1 到 32 个字符'
   [[ "$ADMIN_USERNAME" =~ ^[A-Za-z0-9_-]+$ ]] ||
-    die 'Administrator username may only contain letters, digits, hyphens, and underscores'
+    die '管理员用户名只能包含字母、数字、连字符和下划线'
 }
 
 validate_admin_password() {
-  [[ -n "$ADMIN_PASSWORD" ]] || die 'Administrator password must not be empty'
-  [[ ${#ADMIN_PASSWORD} -le 128 ]] || die 'Administrator password must be at most 128 characters'
-  # The password is stored in an env file that Compose parses, so keep it free of
-  # characters that would be treated as comments, quoting, or interpolation.
-  # Deleting the allowed characters avoids bracket-expression ambiguity.
+  [[ -n "$ADMIN_PASSWORD" ]] || die '管理员密码不能为空'
+  [[ ${#ADMIN_PASSWORD} -le 128 ]] || die '管理员密码最多为 128 个字符'
+  # 密码会写入由 Compose 解析的环境文件，因此不能包含会触发
+  # 注释、引号或变量插值的字符。逐字符过滤可避免字符类解析歧义。
   local residue
   residue="$(printf '%s' "$ADMIN_PASSWORD" | tr -d 'A-Za-z0-9!%&()*+,./:;<=>?@[]^_{|}~-')"
   [[ -z "$residue" ]] ||
-    die 'Administrator password may use letters, digits, and punctuation except spaces, quotes, $, #, \, and `'
+    die '管理员密码可使用字母、数字和常见标点，但不能包含空格、引号、$、#、反斜杠或反引号'
   if [[ ${#ADMIN_PASSWORD} -lt 12 ]]; then
-    warn 'The administrator password is short and can be guessed quickly. Change it after signing in.'
-    if [[ "$PUBLIC_HTTP" == true || "$MODE" == 'https' ]]; then
-      warn 'This deployment is reachable beyond this server, so a weak password is exposed to the network.'
+    warn '管理员密码较短，很容易被猜到，请登录后立即修改'
+    if [[ "$LOCAL_HTTP" != true || "$MODE" == 'https' ]]; then
+      warn '当前服务可从其他设备访问，弱密码会暴露在网络中'
     fi
   fi
 }
@@ -360,43 +364,43 @@ ask() {
   else
     read -r -p "$prompt" reply <>/dev/tty
   fi
-  # Terminals and pasted input can append a carriage return.
+  # 某些终端或粘贴输入会附加回车符。
   printf '%s' "${reply%$'\r'}"
 }
 
 prompt_install_settings() {
   local interactive=false answer
-  # A terminal on /dev/tty keeps prompts working for curl | sudo bash installs.
+  # 从 /dev/tty 读取，使 curl | sudo bash 安装也能正常显示提示。
   [[ "$ASSUME_YES" != true ]] && [[ -e /dev/tty ]] && [[ -r /dev/tty ]] && interactive=true
 
   if [[ -z "$MODE" ]]; then
     if [[ "$interactive" == true ]]; then
-      answer="$(ask 'Deployment mode [http/https] (default: http): ')"
+      answer="$(ask '部署模式 [http/https]（默认：http）：')"
       MODE="${answer:-http}"
     else
       MODE='http'
     fi
   fi
-  [[ "$MODE" == 'http' || "$MODE" == 'https' ]] || die 'Mode must be http or https'
+  [[ "$MODE" == 'http' || "$MODE" == 'https' ]] || die '部署模式必须是 http 或 https'
 
   if [[ "$interactive" == true && "$MODE" == 'https' ]]; then
     if [[ -z "$DOMAIN" ]]; then
-      DOMAIN="$(ask 'HTTPS domain (for example showcase.example.com): ')"
+      DOMAIN="$(ask 'HTTPS 域名（例如 showcase.example.com）：')"
     fi
     if [[ -z "$EMAIL" ]]; then
-      EMAIL="$(ask 'ACME contact email: ')"
+      EMAIL="$(ask '证书联系邮箱：')"
     fi
   fi
 
   if [[ "$interactive" == true && "$MODE" != 'https' && "$HTTP_PORT" == "$DEFAULT_HTTP_PORT" ]]; then
-    answer="$(ask "HTTP port (default: $DEFAULT_HTTP_PORT): ")"
+    answer="$(ask "HTTP 端口（默认：$DEFAULT_HTTP_PORT）：")"
     HTTP_PORT="${answer:-$DEFAULT_HTTP_PORT}"
     validate_port
   fi
 
   if [[ -z "$ADMIN_USERNAME" ]]; then
     if [[ "$interactive" == true ]]; then
-      answer="$(ask "Administrator username (default: $DEFAULT_ADMIN_USERNAME): ")"
+      answer="$(ask "管理员用户名（默认：$DEFAULT_ADMIN_USERNAME）：")"
       ADMIN_USERNAME="${answer:-$DEFAULT_ADMIN_USERNAME}"
     else
       ADMIN_USERNAME="$DEFAULT_ADMIN_USERNAME"
@@ -406,7 +410,7 @@ prompt_install_settings() {
 
   if [[ -z "$ADMIN_PASSWORD" ]]; then
     if [[ "$interactive" == true ]]; then
-      answer="$(ask "Administrator password (default: $DEFAULT_ADMIN_PASSWORD): " true)"
+      answer="$(ask "管理员密码（默认：$DEFAULT_ADMIN_PASSWORD）：" true)"
       ADMIN_PASSWORD="${answer:-$DEFAULT_ADMIN_PASSWORD}"
     else
       ADMIN_PASSWORD="$DEFAULT_ADMIN_PASSWORD"
@@ -436,26 +440,26 @@ EOF
 
 install_app() (
   preflight
-  [[ ! -e "$ENV_FILE" ]] || die "An installation already exists at $INSTALL_DIR; use upgrade instead"
+  [[ ! -e "$ENV_FILE" ]] || die "$INSTALL_DIR 已存在安装实例，请使用 upgrade 升级"
 
   prompt_install_settings
   if [[ "$MODE" == 'https' ]]; then
     validate_domain
     validate_email
-  elif [[ "$PUBLIC_HTTP" == true ]]; then
-    warn 'Public HTTP sends login credentials without transport encryption. Prefer HTTPS.'
+  elif [[ "$LOCAL_HTTP" != true ]]; then
+    warn 'HTTP 默认监听所有地址，其他设备可以直接访问；登录流量不会被加密，公网部署建议使用 HTTPS'
   fi
   check_install_ports
 
   local parent stage https_verified=true
   parent="$(dirname "$INSTALL_DIR")"
   mkdir -p "$parent"
-  [[ -w "$parent" ]] || die "Installation parent is not writable: $parent"
+  [[ -w "$parent" ]] || die "安装目录的上级目录不可写：$parent"
   check_disk_space "$parent"
   mkdir -p "$INSTALL_DIR"/{database,sites,uploads,backups}
   chmod 700 "$INSTALL_DIR" "$INSTALL_DIR/backups"
   acquire_operation_lock
-  [[ ! -e "$ENV_FILE" ]] || die "An installation already exists at $INSTALL_DIR; use upgrade instead"
+  [[ ! -e "$ENV_FILE" ]] || die "$INSTALL_DIR 已存在安装实例，请使用 upgrade 升级"
 
   stage="$(mktemp -d "$INSTALL_DIR/.install.XXXXXX")"
   trap 'rm -rf "$stage"' EXIT
@@ -473,34 +477,35 @@ install_app() (
   if ! compose up -d --no-build --remove-orphans || ! wait_for_health 180; then
     compose logs --tail=100 >&2 || true
     compose down --remove-orphans >/dev/null 2>&1 || true
-    die 'Application failed its health check; deployment files and persistent data were preserved'
+    die '应用健康检查失败；部署文件和持久化数据已保留'
   fi
   if [[ "$MODE" == 'https' ]]; then
-    wait_for_service_running caddy 90 || { compose logs --tail=100 caddy >&2 || true; die 'Caddy failed to start'; }
+    wait_for_service_running caddy 90 || { compose logs --tail=100 caddy >&2 || true; die 'Caddy 启动失败'; }
     if ! wait_for_https; then
       https_verified=false
-      warn 'The local services are healthy, but public HTTPS was not reachable; check DNS and firewall settings'
+      warn '本机服务正常，但无法从当前服务器访问公网 HTTPS，请检查 DNS 和防火墙'
     fi
   fi
 
   trap - EXIT INT TERM HUP
   rm -rf "$stage"
-  printf '\nInstallation completed.\n'
+  printf '\n安装完成。\n'
   if [[ "$MODE" == 'https' ]]; then
-    printf 'URL: https://%s/\n' "$DOMAIN"
-    [[ "$https_verified" == true ]] || printf 'Public HTTPS reachability was not verified from this server.\n'
-  elif [[ "$PUBLIC_HTTP" == true ]]; then
-    printf 'URL: http://<server-ip>:%s/\n' "$HTTP_PORT"
+    printf '访问地址：https://%s/\n' "$DOMAIN"
+    [[ "$https_verified" == true ]] || printf '当前服务器未能验证公网 HTTPS 可达性。\n'
+  elif [[ "$LOCAL_HTTP" == true ]]; then
+    printf '访问地址：http://127.0.0.1:%s/\n' "$HTTP_PORT"
+    printf '当前仅监听本机地址，如需其他设备直接访问，请重新安装且不要使用 --local-http。\n'
   else
-    printf 'URL: http://127.0.0.1:%s/\n' "$HTTP_PORT"
-    printf 'For remote access, use an SSH tunnel or a trusted reverse proxy.\n'
+    printf '访问地址：http://<服务器IP>:%s/\n' "$HTTP_PORT"
+    printf '当前监听所有地址 0.0.0.0，其他设备可通过服务器 IP 直接访问。\n'
   fi
-  printf 'Administrator: %s\n' "$ADMIN_USERNAME"
-  printf 'Credentials and deployment settings: %s\n' "$ENV_FILE"
+  printf '管理员用户名：%s\n' "$ADMIN_USERNAME"
+  printf '凭据和部署配置：%s\n' "$ENV_FILE"
   if [[ ${#ADMIN_PASSWORD} -lt 12 ]]; then
-    printf 'The administrator password you chose is weak. Change it from Account Settings now.\n'
+    printf '当前管理员密码较弱，请立即在“账号设置”中修改。\n'
   else
-    printf 'Change the password from Account Settings after first login.\n'
+    printf '首次登录后可在“账号设置”中修改密码。\n'
   fi
 )
 
@@ -514,15 +519,15 @@ backup_app_locked() (
   mkdir -p "$INSTALL_DIR/backups"
   chmod 700 "$INSTALL_DIR/backups"
 
-  # shellcheck disable=SC2329 # Invoked by the EXIT trap below.
+  # shellcheck disable=SC2329 # 由下方 EXIT 陷阱调用。
   backup_cleanup() {
     local result=$?
     trap - EXIT INT TERM HUP
     rm -f "$temporary" "$temporary_checksum"
     if [[ "$was_running" == true ]]; then
-      warn 'Restarting services after an interrupted or failed backup'
+      warn '备份被中断或失败，正在重新启动服务'
       if ! compose up -d --no-build >/dev/null 2>&1 || ! wait_for_health 180; then
-        warn 'Services could not be restored after the backup interruption'
+        warn '备份中断后未能恢复服务'
         result=1
       fi
     fi
@@ -535,7 +540,7 @@ backup_app_locked() (
 
   if [[ -n "$(compose ps --status running -q 2>/dev/null || true)" ]]; then
     was_running=true
-    log 'Stopping services briefly for a consistent SQLite backup'
+    log '正在短暂停止服务，以创建一致的 SQLite 备份'
     compose stop
   fi
   tar -C "$INSTALL_DIR" -czf "$temporary" .env database sites uploads
@@ -549,11 +554,11 @@ backup_app_locked() (
 
   if [[ "$was_running" == true ]]; then
     compose up -d --no-build >/dev/null
-    wait_for_health 180 || die 'Backup completed, but the application did not become healthy after restart'
+    wait_for_health 180 || die '备份已完成，但应用重启后未恢复健康状态'
     was_running=false
   fi
   trap - EXIT INT TERM HUP
-  log "Backup created: $archive"
+  log "备份已创建：$archive"
 )
 
 backup_app() {
@@ -572,24 +577,24 @@ upgrade_app() (
   old_version="$(env_value IMAGE_TAG)"
   mode="$(env_value DEPLOY_MODE)"
   repository="$(env_value STATIC_HOST_IMAGE)"
-  [[ -n "$repository" ]] || die 'STATIC_HOST_IMAGE is missing from the installation environment'
-  [[ "$VERSION" != "$old_version" ]] || { log "Already running version $VERSION"; return 0; }
+  [[ -n "$repository" ]] || die '安装环境中缺少 STATIC_HOST_IMAGE'
+  [[ "$VERSION" != "$old_version" ]] || { log "当前已经是 $VERSION 版本"; return 0; }
 
-  log "Preparing $repository:$VERSION"
+  log "正在准备镜像 $repository:$VERSION"
   if [[ "$SKIP_PULL" != true ]]; then docker pull "$repository:$VERSION"; fi
   docker image inspect "$repository:$VERSION" >/dev/null
-  docker image inspect "$repository:$old_version" >/dev/null || die "The rollback image is unavailable: $repository:$old_version"
+  docker image inspect "$repository:$old_version" >/dev/null || die "找不到可用于回滚的旧镜像：$repository:$old_version"
 
   stage="$(mktemp -d "$INSTALL_DIR/.upgrade.XXXXXX")"
   rollback_dir="$(mktemp -d "$INSTALL_DIR/.rollback.XXXXXX")"
   validation_env="$stage/.env"
 
-  # shellcheck disable=SC2329 # Invoked by upgrade_cleanup.
+  # shellcheck disable=SC2329 # 由 upgrade_cleanup 调用。
   restore_previous() {
     local item
     [[ "$restored" == false ]] || return 0
     restored=true
-    warn "Restoring version $old_version"
+    warn "正在恢复版本 $old_version"
     for item in deploy-assets.sha256 "${ASSET_NAMES[@]}"; do
       cp "$rollback_dir/$item" "$INSTALL_DIR/$item" || return 1
     done
@@ -602,16 +607,16 @@ upgrade_app() (
     fi
   }
 
-  # shellcheck disable=SC2329 # Invoked by the EXIT trap below.
+  # shellcheck disable=SC2329 # 由下方 EXIT 陷阱调用。
   upgrade_cleanup() {
     local result=$?
     trap - EXIT INT TERM HUP
     if [[ "$rollback_needed" == true ]]; then
       if restore_previous; then
-        warn "Rollback completed: $old_version is healthy"
+        warn "回滚完成：版本 $old_version 已恢复健康"
         rm -rf "$rollback_dir"
       else
-        warn "ROLLBACK FAILED. Recovery files were preserved at $rollback_dir"
+        warn "回滚失败，恢复文件已保留在 $rollback_dir"
         result=1
       fi
     else
@@ -641,20 +646,20 @@ upgrade_app() (
   install_release_assets "$stage"
   set_env_value IMAGE_TAG "$VERSION"
   if ! compose config --quiet || ! compose up -d --no-build --remove-orphans || ! wait_for_health 180; then
-    die 'Upgrade failed while starting the new application image'
+    die '启动新版本应用镜像时升级失败'
   fi
   if [[ "$mode" == 'https' ]]; then
-    wait_for_service_running caddy 90 || die 'Upgrade failed because Caddy did not start'
+    wait_for_service_running caddy 90 || die 'Caddy 未能启动，升级失败'
     DOMAIN="$(env_value PLATFORM_ORIGIN)"
     if ! wait_for_https; then
-      warn 'Upgrade is healthy locally, but public HTTPS could not be verified; no rollback was performed'
+      warn '升级后的本机服务正常，但无法验证公网 HTTPS；未执行回滚'
     fi
   fi
 
   rollback_needed=false
   trap - EXIT INT TERM HUP
   rm -rf "$stage" "$rollback_dir"
-  log "Upgrade completed: $old_version -> $VERSION"
+  log "升级完成：$old_version -> $VERSION"
 )
 
 status_app() {
@@ -676,5 +681,5 @@ case "$COMMAND" in
   status) status_app ;;
   logs) logs_app ;;
   help) usage ;;
-  *) usage >&2; die "Unknown command: $COMMAND" ;;
+  *) usage >&2; die "未知命令：$COMMAND" ;;
 esac

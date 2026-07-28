@@ -8,7 +8,7 @@ docker.io/epiphany131/static-site-showcase
 
 支持平台：`linux/amd64`、`linux/arm64`。
 
-生产部署建议固定完整版本（例如 `1.1.0`），而不是长期跟踪 `latest`。
+生产部署建议固定完整版本（例如 `1.2.0`），而不是长期跟踪 `latest`。
 
 ## 一键部署
 
@@ -17,17 +17,18 @@ docker.io/epiphany131/static-site-showcase
 | 提示 | 默认值 |
 | --- | --- |
 | 部署模式 | `http` |
+| HTTP 监听 | `0.0.0.0`（所有地址） |
 | HTTP 端口 | `3000` |
 | 管理员用户名 | `admin` |
 | 管理员密码 | `123456` |
 
-默认密码 `123456` 只适合本机试用。任何能访问该地址的人都可以用它登录，请在首次登录后立即在 **账号设置** 中修改，或安装时直接输入自己的密码。也可以用 `--port`、`--admin-username`、`--admin-password` 在命令行直接指定，用 `--yes` 跳过全部提示并接受默认值。
+默认 HTTP 会对所有网卡公开端口，其他设备可以通过服务器 IP 直接访问。默认密码 `123456` 很容易被猜到，任何能访问该端口的人都可以尝试登录；请在安装时输入强密码或首次登录后立即在 **账号设置** 中修改，公网部署建议使用 HTTPS。也可以用 `--port`、`--admin-username`、`--admin-password` 在命令行直接指定，用 `--yes` 跳过全部提示并接受默认值。只有显式使用 `--local-http` 时才限制为 `127.0.0.1`。
 
-以下命令固定到 Git 标签 `v1.1.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
+以下命令固定到 Git 标签 `v1.2.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
 
 ```bash
 mkdir static-site-showcase-installer && cd static-site-showcase-installer
-base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0
+base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0
 for file in deploy.sh deploy-assets.sha256 docker-compose.yml docker-compose.production.yml Caddyfile; do
   curl -fSLO "$base/$file"
 done
@@ -37,30 +38,32 @@ less deploy.sh
 sudo bash deploy.sh install --mode http
 ```
 
-### 本机 HTTP
+### 公共 HTTP（默认）
 
-默认只监听 `127.0.0.1:3000`，适合 SSH 隧道或已有反向代理：
+默认监听 `0.0.0.0:3000`，部署完成后可直接通过 `http://服务器IP:3000/` 访问：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
-### 公共 HTTP
+HTTP 登录流量不会被传输层加密。任何能访问该端口的人都可以打开页面并尝试登录；请使用强密码，面向互联网时应使用 HTTPS。
+
+### 仅本机 HTTP
+
+只有显式传入 `--local-http` 才限制监听 `127.0.0.1:3000`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
-  | sudo bash -s -- install --mode http --public-http
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
+  | sudo bash -s -- install --mode http --local-http
 ```
-
-公共 HTTP 会在 `0.0.0.0:3000` 监听，浏览器登录凭据不会通过传输层加密。面向互联网时应使用 HTTPS。
 
 ### Caddy 自动 HTTPS
 
 域名 DNS 必须指向服务器，并开放 TCP 80/443 和 UDP 443：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.2.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -90,6 +93,7 @@ Caddy 会自动申请和续期证书。Node.js 服务只在 Docker 网络中暴�
 | 提示 | 默认值 |
 | --- | --- |
 | 部署模式 | `http` |
+| HTTP 监听 | `0.0.0.0`（所有地址） |
 | HTTP 端口 | `3000` |
 | 管理员用户名 | `admin` |
 | 管理员密码 | `123456` |
@@ -111,7 +115,7 @@ sudo bash deploy.sh install --mode http --port 8080 \
 sudo /opt/static-site-showcase/deploy.sh status
 sudo /opt/static-site-showcase/deploy.sh logs
 sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.1.0
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.2.0
 ```
 
 自定义安装目录时，每次命令使用相同的 `--dir`：
@@ -163,10 +167,10 @@ cp .env.example .env
 编辑 `.env`：
 
 ```env
-IMAGE_TAG=1.0.0
+IMAGE_TAG=1.2.0
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=replace-with-a-long-random-password
-HTTP_BIND=127.0.0.1
+HTTP_BIND=0.0.0.0
 HTTP_PORT=3000
 ```
 
@@ -203,7 +207,7 @@ docker compose -f docker-compose.production.yml up -d --no-build
 mkdir -p database sites uploads
 docker run -d \
   --name static-site-showcase \
-  -p 127.0.0.1:3000:3000 \
+  -p 3000:3000 \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_PASSWORD=replace-with-a-long-random-password \
   -e DB_PATH=/app/database/platform.db \
@@ -211,7 +215,7 @@ docker run -d \
   -v "$PWD/sites:/app/sites" \
   -v "$PWD/uploads:/app/uploads" \
   --restart unless-stopped \
-  epiphany131/static-site-showcase:1.0.0
+  epiphany131/static-site-showcase:1.2.0
 ```
 
 镜像内置健康检查。查看状态：
@@ -236,7 +240,7 @@ latest
 
 ## 安全说明
 
-- HTTP 默认只监听 loopback；显式 `--public-http` 才开放所有网卡。
+- HTTP 默认监听所有网卡 `0.0.0.0`，其他设备可以通过服务器 IP 直接访问；使用 `--local-http` 可限制为 `127.0.0.1`。
 - 应用接受任意语法合法 Host，生产域名限制由 Caddy或其他受信任代理完成。
 - 不启用带凭据 CORS。
 - 托管网站使用不含 `allow-same-origin` 的 CSP 沙箱。
