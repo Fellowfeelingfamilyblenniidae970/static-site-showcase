@@ -9,6 +9,7 @@ database/
 test/
 test-site/
 test-site.zip
+docs/
 coverage/
 .nyc_output/
 backups/

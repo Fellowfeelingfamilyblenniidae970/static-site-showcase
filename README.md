@@ -9,6 +9,34 @@
 
 平台基于 **Node.js 22、Express 和 SQLite** 构建，不依赖外部数据库服务，同时提供多用户权限、Markdown 内容页面、站点沙箱隔离、Docker Compose 与 Caddy HTTPS 部署方案。
 
+## 界面预览
+
+### 作品展示首页
+
+支持大卡片、网格和紧凑列表布局，并提供浅色、深色与跟随系统三种主题。
+
+![作品展示首页](docs/images/gallery.png)
+
+### 源码浏览与下载
+
+公开源码的作品可以在线浏览文件树、查看语法高亮代码、复制内容，并直接下载完整 ZIP。
+
+![源码浏览与下载](docs/images/source-browser.png)
+
+### 静态网站独立预览
+
+每个作品都拥有独立运行地址，上传的 HTML、CSS 和 JavaScript 会在 CSP 沙箱中实时运行。
+
+![静态网站独立预览](docs/images/live-preview.png)
+
+### Markdown 内容页面
+
+管理员可以创建带分类、目录、代码高亮和前后篇导航的文章、文档及代码教程。
+
+![Markdown 内容页面](docs/images/content-page.png)
+
+> 以上截图使用隔离演示数据生成，不包含真实账号、用户上传内容或生产环境数据。
+
 ## 功能亮点
 
 ### 静态网站发布
