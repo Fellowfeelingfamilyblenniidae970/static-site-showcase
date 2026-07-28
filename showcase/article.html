@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>内容页面 · 创意展厅</title>
+  <link rel="stylesheet" href="/showcase/style.css">
+  <link rel="stylesheet" href="/showcase/prism.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span><span>创意展厅</span></a>
+    <nav class="nav-links" aria-label="主导航"><a href="/">首页</a><a href="/pages" aria-current="page">内容</a></nav>
+    <div class="top-actions"><a class="dashboard-link" href="/login">管理员登录</a><div class="theme-switch" role="group" aria-label="主题"><button type="button" data-theme="light" aria-label="浅色主题">☼</button><button type="button" data-theme="system" aria-label="跟随系统">◫</button><button type="button" data-theme="dark" aria-label="深色主题">☾</button></div></div>
+  </header>
+  <main class="article-shell">
+    <div id="articleState" class="detail-loading"><span class="loader"></span>正在加载内容...</div>
+    <div id="articleLayout" class="article-layout" hidden>
+      <aside class="article-sidebar" aria-label="内容导航"><a class="back-link" href="/pages">← 全部内容</a><nav id="articleCategories" class="page-navigation"></nav></aside>
+      <article class="article-content">
+        <p id="articleCategory" class="section-kicker"></p>
+        <h1 id="articleTitle"></h1>
+        <time id="articleDate"></time>
+        <p id="articleExcerpt" class="article-excerpt"></p>
+        <div id="articleBody" class="prose"></div>
+        <nav id="articlePager" class="article-pager" aria-label="前后内容"></nav>
+      </article>
+      <aside class="toc-sidebar"><strong>本页目录</strong><nav id="articleToc" aria-label="本页目录"></nav></aside>
+    </div>
+  </main>
+  <footer class="footer"><p>创意展厅 · 内容页面</p><a href="/pages">全部内容</a></footer>
+  <script src="/showcase/theme.js"></script><script src="/showcase/site-config.js"></script><script src="/showcase/prism.js"></script><script src="/showcase/article.js"></script>
+</body>
+</html>

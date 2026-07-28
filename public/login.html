@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="登录静态托管管理后台">
+  <title>登录 · 静态托管</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <div class="brand" aria-label="静态托管">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7 12 3l9 4-9 4-9-4Z"></path>
+            <path d="M3 12l9 4 9-4"></path>
+            <path d="M3 17l9 4 9-4"></path>
+          </svg>
+        </span>
+        <span>静态托管</span>
+      </div>
+
+      <header class="card-header">
+        <h1 id="loginTitle">登录管理后台</h1>
+        <p>输入账号凭据以继续。</p>
+      </header>
+
+      <div id="loginError" class="alert" role="alert" aria-live="polite" hidden></div>
+
+      <form id="loginForm" novalidate>
+        <label class="field" for="username">
+          <span>用户名</span>
+          <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+        </label>
+        <label class="field" for="password">
+          <span>密码</span>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button id="submitButton" type="submit" disabled>
+          <span class="button-text">登录</span>
+          <span class="spinner" aria-hidden="true" hidden></span>
+        </button>
+      </form>
+
+      <p class="back-link"><a href="/">返回作品首页</a></p>
+    </section>
+  </main>
+  <script src="login.js" defer></script>
+</body>
+</html>

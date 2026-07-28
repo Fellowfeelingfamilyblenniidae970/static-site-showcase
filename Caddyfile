@@ -1,0 +1,12 @@
+{
+  email {$ACME_EMAIL}
+}
+
+{$PLATFORM_ORIGIN} {
+  encode zstd gzip
+  reverse_proxy static-host:3000 {
+    header_up Host {host}
+    header_up X-Forwarded-Proto https
+    header_up -X-Forwarded-Host
+  }
+}

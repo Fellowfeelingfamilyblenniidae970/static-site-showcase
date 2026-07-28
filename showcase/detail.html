@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作品详情 · 创意展厅</title>
+  <link rel="stylesheet" href="/showcase/style.css">
+  <link rel="stylesheet" href="/showcase/prism.css">
+</head>
+<body class="detail-body">
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>创意展厅</span>
+    </a>
+    <nav class="nav-links" aria-label="主导航">
+      <a href="/">所有作品</a>
+      <a href="/admin/">工作台</a>
+    </nav>
+    <div class="top-actions">
+      <div class="theme-switch" role="group" aria-label="主题">
+        <button type="button" data-theme="light" aria-label="浅色主题" title="浅色主题">☼</button>
+        <button type="button" data-theme="system" aria-label="跟随系统" title="跟随系统">◫</button>
+        <button type="button" data-theme="dark" aria-label="深色主题" title="深色主题">☾</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="detail-shell">
+    <div id="detailState" class="detail-loading"><span class="loader"></span>正在打开作品...</div>
+    <div id="detailContent" hidden>
+      <section class="detail-heading">
+        <a class="back-link" href="/">← 返回作品列表</a>
+        <div class="title-row">
+          <div>
+            <p class="section-kicker">INTERACTIVE WORK</p>
+            <h1 id="workTitle"></h1>
+            <p id="workDescription"></p>
+          </div>
+          <a id="openStandalone" class="open-work" target="_blank" rel="noopener noreferrer">打开独立预览 ↗</a>
+        </div>
+        <div class="work-byline" aria-label="作品元信息">
+          <span id="workOwner"></span>
+          <time id="workDate"></time>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="作品预览与代码">
+        <div class="workspace-bar">
+          <div class="mode-switch" role="tablist" aria-label="展示模式">
+            <button type="button" role="tab" data-mode="code" aria-selected="true">代码</button>
+            <button type="button" role="tab" data-mode="preview" aria-selected="false">预览</button>
+          </div>
+          <div class="workspace-actions">
+            <button type="button" id="refreshPreview" title="刷新预览" aria-label="刷新预览">↻</button>
+            <button type="button" id="fullscreenPreview" title="全屏预览" aria-label="全屏预览">⛶</button>
+          </div>
+        </div>
+
+        <div class="workspace-content" data-mode="code">
+          <section class="preview-pane" aria-label="实时预览">
+            <div id="previewLoading" class="pane-state"><span class="loader"></span>正在加载预览...</div>
+            <iframe id="previewFrame" title="作品实时预览" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+          </section>
+
+          <section class="code-pane" aria-label="源代码">
+            <aside class="file-panel">
+              <div class="file-panel-title">项目文件</div>
+              <div id="fileTree" class="file-tree"></div>
+            </aside>
+            <div class="code-viewer">
+              <div class="code-toolbar">
+                <div><span id="currentFile">选择文件</span><small id="currentLanguage"></small></div>
+                <div class="code-actions">
+                  <button type="button" id="wrapCode" aria-pressed="false">自动换行</button>
+                  <button type="button" id="copyCode">复制代码</button>
+                  <a id="downloadZip" class="download-zip" download hidden>下载 ZIP</a>
+                </div>
+              </div>
+              <div id="codeState" class="pane-state">请选择左侧文件</div>
+              <pre id="codeBlock" hidden><code id="sourceCode"></code></pre>
+              <div id="lineNumbers" class="line-numbers" hidden aria-hidden="true"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>创意展厅 · 实时预览与只读代码</p>
+    <a href="/">浏览更多作品</a>
+  </footer>
+
+  <script src="/showcase/theme.js"></script>
+  <script src="/showcase/site-config.js"></script>
+  <script src="/showcase/prism.js"></script>
+  <script src="/showcase/detail.js"></script>
+</body>
+</html>

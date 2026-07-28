@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="发现和预览托管在平台上的创意前端作品">
+  <title>创意展厅 · 静态托管</title>
+  <link rel="stylesheet" href="/showcase/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="创意展厅首页">
+      <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>创意展厅</span>
+    </a>
+    <nav class="nav-links" aria-label="主导航">
+      <a href="/" aria-current="page">首页</a>
+      <a href="/pages">内容</a>
+      <a href="/admin/">工作台</a>
+    </nav>
+    <div class="top-actions">
+      <div class="layout-switch" role="group" aria-label="作品布局">
+        <button type="button" data-layout="editorial" aria-label="大卡片布局" title="大卡片">▤</button>
+        <button type="button" data-layout="grid" aria-label="网格布局" title="网格">▦</button>
+        <button type="button" data-layout="compact" aria-label="紧凑列表" title="紧凑列表">☷</button>
+      </div>
+      <a id="authEntry" class="dashboard-link" href="/login">管理员登录</a>
+      <div class="theme-switch" role="group" aria-label="主题">
+        <button type="button" data-theme="light" aria-label="浅色主题" title="浅色主题">☼</button>
+        <button type="button" data-theme="system" aria-label="跟随系统" title="跟随系统">◫</button>
+        <button type="button" data-theme="dark" aria-label="深色主题" title="深色主题">☾</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="gallery-shell">
+    <section class="gallery-intro">
+      <p class="eyebrow">EXPLORE THE WEB</p>
+      <h1>用代码创造的<br><span>有趣世界</span></h1>
+      <p class="intro-copy">探索已公开发布、可直接运行和交互的前端作品。</p>
+      <div class="intro-meta">
+        <span><b id="workCount">—</b> 项公开作品</span>
+        <span class="status-dot"></span>
+        <span>实时运行预览</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="galleryTitle">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">LATEST PUBLISHED</p>
+          <h2 id="galleryTitle">最新发布</h2>
+        </div>
+        <p>发现最新公开的可运行作品</p>
+      </div>
+      <div id="galleryGrid" class="work-list" aria-live="polite">
+        <div class="gallery-state"><span class="loader"></span>正在加载公开作品...</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 创意展厅 · 由静态托管平台驱动</p>
+    <div><a href="/admin/">工作台</a><a href="/health">服务状态</a></div>
+  </footer>
+
+  <script src="/showcase/theme.js"></script>
+  <script src="/showcase/site-config.js"></script>
+  <script src="/showcase/gallery.js"></script>
+</body>
+</html>

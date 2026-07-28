@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="浏览已发布的内容页面">
+  <title>内容页面 · 创意展厅</title>
+  <link rel="stylesheet" href="/showcase/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span><span>创意展厅</span></a>
+    <nav class="nav-links" aria-label="主导航"><a href="/">首页</a><a href="/pages" aria-current="page">内容</a></nav>
+    <div class="top-actions"><a class="dashboard-link" href="/login">管理员登录</a><div class="theme-switch" role="group" aria-label="主题"><button type="button" data-theme="light" aria-label="浅色主题">☼</button><button type="button" data-theme="system" aria-label="跟随系统">◫</button><button type="button" data-theme="dark" aria-label="深色主题">☾</button></div></div>
+  </header>
+  <main class="gallery-shell pages-shell">
+    <section class="gallery-intro pages-intro">
+      <p class="eyebrow">PUBLISHED PAGES</p>
+      <h1>内容页面</h1>
+      <p class="intro-copy">浏览已发布的文章、文档、说明与其他内容。</p>
+    </section>
+    <section aria-labelledby="pageListTitle">
+      <div class="section-heading"><div><p class="section-kicker">ALL CONTENT</p><h2 id="pageListTitle">全部内容</h2></div><p>按类型与分类发现内容</p></div>
+      <div id="articleList" class="article-list" aria-live="polite"><div class="gallery-state"><span class="loader"></span>正在加载内容...</div></div>
+    </section>
+  </main>
+  <footer class="footer"><p>创意展厅 · 内容页面</p><a href="/">返回首页</a></footer>
+  <script src="/showcase/theme.js"></script><script src="/showcase/site-config.js"></script><script src="/showcase/articles.js"></script>
+</body>
+</html>

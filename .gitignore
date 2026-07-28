@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Runtime data
+sites/
+uploads/
+database/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Logs and test output
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+
+# Build, deployment, and backup artifacts
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+*.gz
+*.bz2
+*.xz
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*.dump
+*.sql
+!test-site.zip
+backups/
+dist/
+
+# Credentials and local package-manager configuration
+.npmrc
+.yarnrc
+.yarnrc.yml
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local tooling
+.zcode/
