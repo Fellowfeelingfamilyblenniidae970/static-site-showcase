@@ -4,9 +4,11 @@ set -Eeuo pipefail
 readonly APP_NAME="static-site-showcase"
 readonly DEFAULT_IMAGE_REPOSITORY="docker.io/epiphany131/static-site-showcase"
 readonly IMAGE_REPOSITORY="${STATIC_SHOWCASE_IMAGE_REPOSITORY:-$DEFAULT_IMAGE_REPOSITORY}"
-readonly DEFAULT_VERSION="1.0.0"
+readonly DEFAULT_VERSION="1.1.0"
 readonly DEFAULT_INSTALL_DIR="/opt/static-site-showcase"
 readonly DEFAULT_HTTP_PORT="3000"
+readonly DEFAULT_ADMIN_USERNAME="admin"
+readonly DEFAULT_ADMIN_PASSWORD="123456"
 readonly GITHUB_RAW_BASE="https://raw.githubusercontent.com/epiphany131/static-site-showcase"
 readonly SKIP_PULL="${STATIC_SHOWCASE_SKIP_PULL:-false}"
 readonly ASSET_NAMES=(docker-compose.yml docker-compose.production.yml Caddyfile deploy.sh)
@@ -27,6 +29,8 @@ HTTP_BIND="127.0.0.1"
 PUBLIC_HTTP=false
 ASSUME_YES=false
 LOCK_HELD=false
+ADMIN_USERNAME=""
+ADMIN_PASSWORD=""
 
 log() { printf '[%s] %s\n' "$APP_NAME" "$*"; }
 warn() { printf '[%s] WARNING: %s\n' "$APP_NAME" "$*" >&2; }
@@ -47,9 +51,11 @@ Install options:
   --mode http|https       Deployment mode
   --public-http           Bind HTTP to 0.0.0.0 instead of 127.0.0.1
   --port PORT             Host HTTP port (default: 3000)
+  --admin-username NAME   Initial administrator username (default: admin)
+  --admin-password PASS   Initial administrator password (default: 123456)
   --domain DOMAIN         HTTPS domain without scheme, path, or port
   --email EMAIL           ACME contact email for HTTPS
-  --version VERSION       Docker image version (default: 1.0.0)
+  --version VERSION       Docker image version (default: 1.1.0)
   --dir PATH              Installation directory (default: /opt/static-site-showcase)
   --yes                   Accept non-sensitive defaults without prompting
   -h, --help              Show this help
@@ -71,6 +77,8 @@ while [[ $# -gt 0 ]]; do
     --version) [[ $# -ge 2 ]] || die '--version requires a value'; VERSION="${2#v}"; shift 2 ;;
     --dir) [[ $# -ge 2 ]] || die '--dir requires a value'; INSTALL_DIR="$2"; shift 2 ;;
     --port) [[ $# -ge 2 ]] || die '--port requires a value'; HTTP_PORT="$2"; shift 2 ;;
+    --admin-username) [[ $# -ge 2 ]] || die '--admin-username requires a value'; ADMIN_USERNAME="$2"; shift 2 ;;
+    --admin-password) [[ $# -ge 2 ]] || die '--admin-password requires a value'; ADMIN_PASSWORD="$2"; shift 2 ;;
     --public-http) PUBLIC_HTTP=true; HTTP_BIND="0.0.0.0"; shift ;;
     --yes|-y) ASSUME_YES=true; shift ;;
     --help|-h) usage; exit 0 ;;
@@ -187,10 +195,6 @@ compose() {
   file="$(compose_file)"
   docker compose --project-name "$APP_NAME" --project-directory "$INSTALL_DIR" \
     --env-file "$ENV_FILE" -f "$file" "$@"
-}
-
-generate_password() {
-  od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
 }
 
 source_base() {
@@ -323,16 +327,104 @@ ensure_installed() {
   [[ -f "$(compose_file)" ]] || die "Deployment files are missing from $INSTALL_DIR"
 }
 
+validate_admin_username() {
+  [[ -n "$ADMIN_USERNAME" && ${#ADMIN_USERNAME} -le 32 ]] ||
+    die 'Administrator username must be 1 to 32 characters'
+  [[ "$ADMIN_USERNAME" =~ ^[A-Za-z0-9_-]+$ ]] ||
+    die 'Administrator username may only contain letters, digits, hyphens, and underscores'
+}
+
+validate_admin_password() {
+  [[ -n "$ADMIN_PASSWORD" ]] || die 'Administrator password must not be empty'
+  [[ ${#ADMIN_PASSWORD} -le 128 ]] || die 'Administrator password must be at most 128 characters'
+  # The password is stored in an env file that Compose parses, so keep it free of
+  # characters that would be treated as comments, quoting, or interpolation.
+  # Deleting the allowed characters avoids bracket-expression ambiguity.
+  local residue
+  residue="$(printf '%s' "$ADMIN_PASSWORD" | tr -d 'A-Za-z0-9!%&()*+,./:;<=>?@[]^_{|}~-')"
+  [[ -z "$residue" ]] ||
+    die 'Administrator password may use letters, digits, and punctuation except spaces, quotes, $, #, \, and `'
+  if [[ ${#ADMIN_PASSWORD} -lt 12 ]]; then
+    warn 'The administrator password is short and can be guessed quickly. Change it after signing in.'
+    if [[ "$PUBLIC_HTTP" == true || "$MODE" == 'https' ]]; then
+      warn 'This deployment is reachable beyond this server, so a weak password is exposed to the network.'
+    fi
+  fi
+}
+
+ask() {
+  local prompt="$1" secret="${2:-false}" reply
+  if [[ "$secret" == true ]]; then
+    read -r -s -p "$prompt" reply <>/dev/tty
+    printf '\n' >/dev/tty
+  else
+    read -r -p "$prompt" reply <>/dev/tty
+  fi
+  # Terminals and pasted input can append a carriage return.
+  printf '%s' "${reply%$'\r'}"
+}
+
+prompt_install_settings() {
+  local interactive=false answer
+  # A terminal on /dev/tty keeps prompts working for curl | sudo bash installs.
+  [[ "$ASSUME_YES" != true ]] && [[ -e /dev/tty ]] && [[ -r /dev/tty ]] && interactive=true
+
+  if [[ -z "$MODE" ]]; then
+    if [[ "$interactive" == true ]]; then
+      answer="$(ask 'Deployment mode [http/https] (default: http): ')"
+      MODE="${answer:-http}"
+    else
+      MODE='http'
+    fi
+  fi
+  [[ "$MODE" == 'http' || "$MODE" == 'https' ]] || die 'Mode must be http or https'
+
+  if [[ "$interactive" == true && "$MODE" == 'https' ]]; then
+    if [[ -z "$DOMAIN" ]]; then
+      DOMAIN="$(ask 'HTTPS domain (for example showcase.example.com): ')"
+    fi
+    if [[ -z "$EMAIL" ]]; then
+      EMAIL="$(ask 'ACME contact email: ')"
+    fi
+  fi
+
+  if [[ "$interactive" == true && "$MODE" != 'https' && "$HTTP_PORT" == "$DEFAULT_HTTP_PORT" ]]; then
+    answer="$(ask "HTTP port (default: $DEFAULT_HTTP_PORT): ")"
+    HTTP_PORT="${answer:-$DEFAULT_HTTP_PORT}"
+    validate_port
+  fi
+
+  if [[ -z "$ADMIN_USERNAME" ]]; then
+    if [[ "$interactive" == true ]]; then
+      answer="$(ask "Administrator username (default: $DEFAULT_ADMIN_USERNAME): ")"
+      ADMIN_USERNAME="${answer:-$DEFAULT_ADMIN_USERNAME}"
+    else
+      ADMIN_USERNAME="$DEFAULT_ADMIN_USERNAME"
+    fi
+  fi
+  validate_admin_username
+
+  if [[ -z "$ADMIN_PASSWORD" ]]; then
+    if [[ "$interactive" == true ]]; then
+      answer="$(ask "Administrator password (default: $DEFAULT_ADMIN_PASSWORD): " true)"
+      ADMIN_PASSWORD="${answer:-$DEFAULT_ADMIN_PASSWORD}"
+    else
+      ADMIN_PASSWORD="$DEFAULT_ADMIN_PASSWORD"
+    fi
+  fi
+  validate_admin_password
+}
+
 write_initial_env() {
-  local target="$1" password="$2"
+  local target="$1"
   umask 077
   cat > "$target" <<EOF
 COMPOSE_PROJECT_NAME=$APP_NAME
 STATIC_HOST_IMAGE=$IMAGE_REPOSITORY
 IMAGE_TAG=$VERSION
 DEPLOY_MODE=$MODE
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=$password
+ADMIN_USERNAME=$ADMIN_USERNAME
+ADMIN_PASSWORD=$ADMIN_PASSWORD
 MAX_FILE_SIZE=52428800
 HTTP_BIND=$HTTP_BIND
 HTTP_PORT=$HTTP_PORT
@@ -346,15 +438,7 @@ install_app() (
   preflight
   [[ ! -e "$ENV_FILE" ]] || die "An installation already exists at $INSTALL_DIR; use upgrade instead"
 
-  if [[ -z "$MODE" ]]; then
-    if [[ "$ASSUME_YES" == true || ! -t 0 ]]; then
-      MODE='http'
-    else
-      read -r -p 'Deployment mode [http/https] (default: http): ' MODE
-      MODE="${MODE:-http}"
-    fi
-  fi
-  [[ "$MODE" == 'http' || "$MODE" == 'https' ]] || die 'Mode must be http or https'
+  prompt_install_settings
   if [[ "$MODE" == 'https' ]]; then
     validate_domain
     validate_email
@@ -363,7 +447,7 @@ install_app() (
   fi
   check_install_ports
 
-  local parent password stage https_verified=true
+  local parent stage https_verified=true
   parent="$(dirname "$INSTALL_DIR")"
   mkdir -p "$parent"
   [[ -w "$parent" ]] || die "Installation parent is not writable: $parent"
@@ -379,9 +463,7 @@ install_app() (
   trap 'exit 143' TERM
   trap 'exit 129' HUP
   download_release_assets "$stage"
-  password="$(generate_password)"
-  [[ ${#password} -eq 64 ]] || die 'Failed to generate a strong administrator password'
-  write_initial_env "$stage/.env" "$password"
+  write_initial_env "$stage/.env"
   validate_release_assets "$stage" "$stage/.env" "$MODE"
   install_release_assets "$stage"
   mv -f "$stage/.env" "$ENV_FILE"
@@ -413,10 +495,13 @@ install_app() (
     printf 'URL: http://127.0.0.1:%s/\n' "$HTTP_PORT"
     printf 'For remote access, use an SSH tunnel or a trusted reverse proxy.\n'
   fi
-  printf 'Administrator: admin\n'
-  printf 'Initial password (shown once): %s\n' "$password"
+  printf 'Administrator: %s\n' "$ADMIN_USERNAME"
   printf 'Credentials and deployment settings: %s\n' "$ENV_FILE"
-  printf 'Change the password from Account Settings after first login.\n'
+  if [[ ${#ADMIN_PASSWORD} -lt 12 ]]; then
+    printf 'The administrator password you chose is weak. Change it from Account Settings now.\n'
+  else
+    printf 'Change the password from Account Settings after first login.\n'
+  fi
 )
 
 backup_app_locked() (

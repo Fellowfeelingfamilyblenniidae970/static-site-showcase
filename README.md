@@ -120,25 +120,36 @@ npm start
 
 ### 一键 Docker 部署
 
-公开镜像：`docker.io/epiphany131/static-site-showcase:1.0.0`，支持 `linux/amd64` 和 `linux/arm64`。
+公开镜像：`docker.io/epiphany131/static-site-showcase:1.1.0`，支持 `linux/amd64` 和 `linux/arm64`。
 
 默认安全 HTTP 模式仅监听服务器本机 `127.0.0.1:3000`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
 域名 + Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
 ```
 
-脚本会自动生成强管理员密码并只显示一次，数据默认保存在 `/opt/static-site-showcase`。如需直接通过服务器 IP 的明文 HTTP 访问，可增加 `--public-http`；面向互联网时推荐 HTTPS。
+安装过程会依次询问部署模式、HTTP 端口、管理员用户名和管理员密码，直接回车即使用默认值：
+
+| 提示项 | 默认值 |
+| --- | --- |
+| 部署模式 | `http` |
+| HTTP 端口 | `3000` |
+| 管理员用户名 | `admin` |
+| 管理员密码 | `123456` |
+
+默认密码 `123456` 只适合本机试用。它很容易被猜到，请在首次登录后立即通过 **账号设置** 修改；如果服务对外可访问，请在安装时就输入强密码。也可以使用 `--port`、`--admin-username`、`--admin-password` 直接指定，配合 `--yes` 可完全跳过提示。
+
+数据默认保存在 `/opt/static-site-showcase`。如需直接通过服务器 IP 的明文 HTTP 访问，可增加 `--public-http`；面向互联网时推荐 HTTPS。
 
 安装和升级会下载同一 Git 标签下的 Compose、Caddy 和脚本文件，并使用 `deploy-assets.sha256` 逐项校验后才替换。修改操作使用互斥锁；升级前会创建一致性备份，失败时恢复旧部署文件、旧镜像标签并重新确认健康状态。需要在执行前审阅脚本时，请使用 [Docker 部署文档](DOCKER.md) 中的“下载、校验、再执行”流程。
 

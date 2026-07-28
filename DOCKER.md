@@ -8,15 +8,26 @@ docker.io/epiphany131/static-site-showcase
 
 支持平台：`linux/amd64`、`linux/arm64`。
 
-生产部署建议固定完整版本（例如 `1.0.0`），而不是长期跟踪 `latest`。
+生产部署建议固定完整版本（例如 `1.1.0`），而不是长期跟踪 `latest`。
 
 ## 一键部署
 
-以下命令固定到 Git 标签 `v1.0.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
+安装时脚本会依次询问部署模式、HTTP 端口、管理员用户名和管理员密码，直接回车即使用默认值：
+
+| 提示 | 默认值 |
+| --- | --- |
+| 部署模式 | `http` |
+| HTTP 端口 | `3000` |
+| 管理员用户名 | `admin` |
+| 管理员密码 | `123456` |
+
+默认密码 `123456` 只适合本机试用。任何能访问该地址的人都可以用它登录，请在首次登录后立即在 **账号设置** 中修改，或安装时直接输入自己的密码。也可以用 `--port`、`--admin-username`、`--admin-password` 在命令行直接指定，用 `--yes` 跳过全部提示并接受默认值。
+
+以下命令固定到 Git 标签 `v1.1.0`。脚本会校验随后下载的部署资源；但首个脚本本身仍来自远端。如果需要更高信任级别，建议先下载、审阅并与 Git 标签中的内容核对后再执行：
 
 ```bash
 mkdir static-site-showcase-installer && cd static-site-showcase-installer
-base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0
+base=https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0
 for file in deploy.sh deploy-assets.sha256 docker-compose.yml docker-compose.production.yml Caddyfile; do
   curl -fSLO "$base/$file"
 done
@@ -31,14 +42,14 @@ sudo bash deploy.sh install --mode http
 默认只监听 `127.0.0.1:3000`，适合 SSH 隧道或已有反向代理：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
 ### 公共 HTTP
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode http --public-http
 ```
 
@@ -49,7 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1
 域名 DNS 必须指向服务器，并开放 TCP 80/443 和 UDP 443：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
@@ -74,7 +85,23 @@ Caddy 会自动申请和续期证书。Node.js 服务只在 Docker 网络中暴�
  deploy.sh            后续运维命令
 ```
 
-首次安装会生成 32 字节随机管理员密码，并只在完成时显示一次。请登录后通过 **账号设置** 修改密码。
+首次安装会依次询问部署模式、HTTP 端口、管理员用户名和管理员密码，并使用以下默认值：
+
+| 提示 | 默认值 |
+| --- | --- |
+| 部署模式 | `http` |
+| HTTP 端口 | `3000` |
+| 管理员用户名 | `admin` |
+| 管理员密码 | `123456` |
+
+密码输入不会回显。直接回车即接受默认值。也可以用参数跳过提示：
+
+```bash
+sudo bash deploy.sh install --mode http --port 8080 \
+  --admin-username admin --admin-password '请替换为足够长的随机密码' --yes
+```
+
+默认密码 `123456` 只适合本机试用。任何能访问该端口的人都可以用它登录，请在首次登录后立即在 **账号设置** 中修改，公开部署时不要使用默认密码。密码长度小于 12 位时脚本会打印警告。
 
 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 只负责空数据库中的首个管理员。修改 `.env` 不会覆盖已有账号。
 

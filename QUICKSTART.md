@@ -7,27 +7,42 @@
 默认安全 HTTP 模式仅监听服务器本机 `127.0.0.1:3000`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode http
 ```
 
 如需直接通过服务器 IP 访问，可显式开放 HTTP（登录流量不会加密）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode http --public-http
 ```
 
 使用域名和 Caddy 自动 HTTPS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.1.0/deploy.sh \
   | sudo bash -s -- install --mode https \
       --domain showcase.example.com \
       --email admin@example.com
 ```
 
-脚本会自动生成强管理员密码并只显示一次。部署文件和数据默认保存在 `/opt/static-site-showcase`。脚本使用版本化 SHA-256 清单校验 Compose、Caddy 和运维脚本；如需在执行首个远端脚本前手工校验和审阅，请按 [Docker 部署文档](DOCKER.md) 的高信任流程操作。
+安装时脚本会依次询问部署模式、HTTP 端口、管理员用户名和管理员密码，直接回车即使用默认值：
+
+| 提示 | 默认值 |
+| --- | --- |
+| HTTP 端口 | `3000` |
+| 管理员用户名 | `admin` |
+| 管理员密码 | `123456` |
+
+默认密码 `123456` 很容易被猜到，登录后请立即在 **账号设置** 中修改。也可以用参数跳过提问：
+
+```bash
+sudo bash deploy.sh install --mode http --port 3000 \
+  --admin-username admin --admin-password '换成足够长的随机密码'
+```
+
+部署文件和数据默认保存在 `/opt/static-site-showcase`。脚本使用版本化 SHA-256 清单校验 Compose、Caddy 和运维脚本；如需在执行首个远端脚本前手工校验和审阅，请按 [Docker 部署文档](DOCKER.md) 的高信任流程操作。
 
 ## 运维命令
 
