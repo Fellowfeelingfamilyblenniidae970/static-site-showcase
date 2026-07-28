@@ -118,24 +118,40 @@ npm start
 
 首次启动会创建 SQLite 数据库和初始管理员。初始账号环境变量只在数据库尚无用户时生效；之后请在后台的 **账号设置** 中修改账号信息。
 
-### 使用 Docker Compose
+### 一键 Docker 部署
+
+公开镜像：`docker.io/epiphany131/static-site-showcase:1.0.0`，支持 `linux/amd64` 和 `linux/arm64`。
+
+默认安全 HTTP 模式仅监听服务器本机 `127.0.0.1:3000`：
 
 ```bash
-git clone https://github.com/epiphany131/static-site-showcase.git
-cd static-site-showcase
-cp .env.example .env
-# 编辑 .env 并设置 ADMIN_PASSWORD
-docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+  | sudo bash -s -- install --mode http
 ```
 
-查看运行状态：
+域名 + Caddy 自动 HTTPS：
 
 ```bash
-docker compose ps
-docker compose logs -f
+curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.0.0/deploy.sh \
+  | sudo bash -s -- install --mode https \
+      --domain showcase.example.com \
+      --email admin@example.com
 ```
 
-普通 Compose 会将服务发布到宿主机的 `3000` 端口，并将运行数据持久化到当前项目目录。
+脚本会自动生成强管理员密码并只显示一次，数据默认保存在 `/opt/static-site-showcase`。如需直接通过服务器 IP 的明文 HTTP 访问，可增加 `--public-http`；面向互联网时推荐 HTTPS。
+
+安装和升级会下载同一 Git 标签下的 Compose、Caddy 和脚本文件，并使用 `deploy-assets.sha256` 逐项校验后才替换。修改操作使用互斥锁；升级前会创建一致性备份，失败时恢复旧部署文件、旧镜像标签并重新确认健康状态。需要在执行前审阅脚本时，请使用 [Docker 部署文档](DOCKER.md) 中的“下载、校验、再执行”流程。
+
+常用运维命令：
+
+```bash
+sudo /opt/static-site-showcase/deploy.sh status
+sudo /opt/static-site-showcase/deploy.sh logs
+sudo /opt/static-site-showcase/deploy.sh backup
+sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.1.0
+```
+
+也可以克隆源码并执行 `docker compose up -d --build`。完整说明请查看 [Docker 部署文档](DOCKER.md)。
 
 ## 使用方法
 
@@ -200,37 +216,36 @@ script.js
 | `ADMIN_PASSWORD` | 新数据库必填 | 初始管理员密码 |
 | `COOKIE_SECURE` | `false` | 为 `true` 时仅通过 HTTPS 发送 Cookie |
 | `TRUST_PROXY` | `0` | 设置为 `1` 时信任一层反向代理 |
+| `STATIC_HOST_IMAGE` | Docker Hub 官方镜像 | 高级覆盖；通常保持默认 |
+| `IMAGE_TAG` | `1.0.0` | Docker 镜像版本；生产环境建议固定 SemVer |
+| `HTTP_BIND` | `127.0.0.1` | Docker HTTP 宿主机监听地址 |
+| `HTTP_PORT` | `3000` | Docker HTTP 宿主机端口 |
+| `PLATFORM_ORIGIN` | 无 | Caddy HTTPS 域名，不包含协议或路径 |
+| `ACME_EMAIL` | 无 | Caddy ACME 联系邮箱 |
 
 > 修改 `ADMIN_USERNAME` 或 `ADMIN_PASSWORD` 不会覆盖已有数据库中的账号。已有用户应通过后台账号设置修改凭据。
 
 ## HTTPS 生产部署
 
-项目提供 `docker-compose.production.yml` 和 Caddy 配置。Caddy 会自动申请和续期 HTTPS 证书，Node.js 服务只在 Docker 内部网络中提供服务。
-
-创建生产环境 `.env`：
-
-```env
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=请替换为足够长的随机密码
-PLATFORM_ORIGIN=showcase.example.com
-ACME_EMAIL=admin@example.com
-```
-
-确保域名 DNS 已指向服务器，并开放 TCP 80/443 与 UDP 443，然后运行：
-
-```bash
-docker compose -f docker-compose.production.yml up -d --build
-```
+一键脚本的 `--mode https` 会下载并校验固定版本的生产 Compose 与 Caddyfile，验证域名和邮箱，并在健康检查通过后尝试验证公网 HTTPS。域名 DNS 必须指向服务器，并开放 TCP 80/443 与 UDP 443；若服务器自身无法通过 DNS 或回环 NAT 访问公网地址，脚本会保留已健康运行的服务并提示检查网络，而不会因该外部探测回滚。
 
 生产配置会：
 
 - 强制要求管理员密码、域名和 ACME 邮箱；
 - 启用 `COOKIE_SECURE=true`；
 - 配置 `TRUST_PROXY=1`；
-- 等待 Node.js 健康检查通过后再启动 Caddy 代理；
-- 只由 Caddy 对外发布 80/443 端口。
+- 等待 Node.js 健康检查通过后再启动 Caddy；
+- 只由 Caddy 对外发布 80/443；
+- 将 Caddy 证书状态保存在命名卷中。
 
-完整说明请查看 [Docker 部署文档](DOCKER.md)。
+手动部署时，在 `.env` 设置 `IMAGE_TAG`、`ADMIN_PASSWORD`、`PLATFORM_ORIGIN` 和 `ACME_EMAIL`，然后执行：
+
+```bash
+docker compose -f docker-compose.production.yml pull
+docker compose -f docker-compose.production.yml up -d --no-build
+```
+
+完整的备份、升级、失败恢复和标签策略请查看 [Docker 部署文档](DOCKER.md)。
 
 ## 网络与沙箱模型
 

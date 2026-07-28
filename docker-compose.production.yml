@@ -1,7 +1,8 @@
 services:
   static-host:
-    build: .
-    container_name: static-host-platform
+    image: ${STATIC_HOST_IMAGE:-docker.io/epiphany131/static-site-showcase}:${IMAGE_TAG:-latest}
+    build:
+      context: .
     expose:
       - "3000"
     volumes:
@@ -11,7 +12,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - MAX_FILE_SIZE=52428800
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
       - DB_PATH=/app/database/platform.db
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD to a strong initial password}
@@ -25,10 +26,15 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks: [web]
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   caddy:
     image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-    container_name: static-host-caddy
     ports:
       - "80:80"
       - "443:443"
@@ -38,13 +44,19 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
-      - ACME_EMAIL=${ACME_EMAIL:?请设置 ACME_EMAIL}
-      - PLATFORM_ORIGIN=${PLATFORM_ORIGIN:?请设置 PLATFORM_ORIGIN，例如 example.com}
+      - ACME_EMAIL=${ACME_EMAIL:?Set ACME_EMAIL}
+      - PLATFORM_ORIGIN=${PLATFORM_ORIGIN:?Set PLATFORM_ORIGIN, for example showcase.example.com}
     depends_on:
       static-host:
         condition: service_healthy
     restart: unless-stopped
     networks: [web]
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   web:

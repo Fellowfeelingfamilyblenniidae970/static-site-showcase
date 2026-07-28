@@ -9,6 +9,8 @@ database/
 test/
 test-site/
 test-site.zip
+deploy.sh
+deploy-assets.sha256
 docs/
 coverage/
 .nyc_output/

@@ -1,27 +1,38 @@
 services:
   static-host:
-    build: .
-    container_name: static-host-platform
+    image: ${STATIC_HOST_IMAGE:-docker.io/epiphany131/static-site-showcase}:${IMAGE_TAG:-latest}
+    build:
+      context: .
     ports:
-      - "3000:3000"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-3000}:3000"
     volumes:
-      # 持久化存储网站文件
       - ./sites:/app/sites
-      # 持久化数据库
       - ./database:/app/database
-      # 临时上传目录
       - ./uploads:/app/uploads
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - MAX_FILE_SIZE=52428800
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
       - DB_PATH=/app/database/platform.db
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD before starting the service}
       - COOKIE_SECURE=false
+      - TRUST_PROXY=0
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     networks:
       - static-host-network
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   static-host-network:
